@@ -36,3 +36,15 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # bookish-couscous
 # sub-with-openai
+
+## Environment Setup
+
+1. Copy the `.env.example` file to `.env`:
+   ```
+   cp .env.example .env
+   ```
+
+2. Open the `.env` file and replace `your_openai_api_key_here` with your actual OpenAI API key.
+
+Note: Never commit your actual API keys to the repository. The `.env` file is ignored by git to prevent accidental exposure of sensitive information.
+# sub-with-openai
