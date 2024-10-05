@@ -26,7 +26,6 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
   const [searchQuery, setSearchQuery] = useState("")
   const [prompts, setPrompts] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [generatedAffirmations, setGeneratedAffirmations] = useState<string[]>([])
 
   const addPrompt = () => {
     if (searchQuery.trim() !== "" && !prompts.includes(searchQuery.trim())) {
@@ -47,32 +46,39 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
   }
 
   const generateAffirmation = async () => {
-    if (prompts.length > 0) {
-      setIsLoading(true)
-      try {
-        const response = await fetch('/api/generate-affirmation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ prompt: prompts.join(', ') }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to generate affirmations: ${errorData.error || response.statusText}`);
-        }
-
-        const data = await response.json();
-        const newAffirmations = data.affirmations;
-        setGeneratedAffirmations(prev => [...prev, ...newAffirmations]);
-        onAffirmationGenerated([...generatedAffirmations, ...newAffirmations]);
-      } catch (error) {
-        console.error('Error generating affirmations:', error);
-        // Handle error (e.g., show error message to user)
-      } finally {
-        setIsLoading(false)
+    setIsLoading(true)
+    try {
+      let promptToUse = prompts.join(', ')
+      if (searchQuery.trim()) {
+        promptToUse += promptToUse ? `, ${searchQuery.trim()}` : searchQuery.trim()
       }
+      
+      if (!promptToUse) {
+        throw new Error('No prompt provided')
+      }
+
+      const response = await fetch('/api/generate-affirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: promptToUse }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to generate affirmations: ${errorData.error || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const newAffirmations = data.affirmations;
+      onAffirmationGenerated(newAffirmations);
+      setSearchQuery("")
+    } catch (error) {
+      console.error('Error generating affirmations:', error);
+      // Handle error (e.g., show error message to user)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -92,11 +98,11 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
           <Button onClick={addPrompt} size="sm">Add</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="px-2 w-8 relative overflow-hidden">
-                <Sparkles className="h-4 w-4 text-purple-600" />
+              <Button variant="outline" size="sm" className="px-2 w-16 relative overflow-hidden">
+                <Sparkles className="h-8 w-8 text-purple-600" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
+            <DropdownMenuContent className="w-112">
               {inspirationPrompts.map((prompt) => (
                 <DropdownMenuItem
                   key={prompt}
@@ -111,7 +117,7 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex flex-wrap gap-1 mb-2 flex-grow overflow-y-auto">
+        <div className="flex flex-wrap gap-1 mb-2 overflow-y-auto flex-grow">
           <AnimatePresence>
             {prompts.map((prompt) => (
               <motion.span 
@@ -134,63 +140,14 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
             ))}
           </AnimatePresence>
         </div>
-        <div className="relative h-8">
-          <AnimatePresence mode="wait">
-            {!isLoading ? (
-              <motion.div
-                key="button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0"
-              >
-                <Button 
-                  onClick={generateAffirmation} 
-                  className="w-full h-full bg-gray-800 hover:bg-gray-900 text-white relative overflow-hidden"
-                  disabled={prompts.length === 0}
-                >
-                  <span className="relative z-10">Generate Affirmation</span>
-                  <motion.div
-                    className="absolute inset-0 z-0"
-                    initial={{ backgroundPosition: "0% 50%" }}
-                    animate={{ backgroundPosition: "100% 50%" }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                      ease: "easeInOut"
-                    }}
-                    style={{
-                      background: "linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.3) 50%, rgba(0,0,0,0) 100%)",
-                      backgroundSize: "200% 100%"
-                    }}
-                  />
-                </Button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 bg-gray-200 rounded-md overflow-hidden"
-              >
-                <motion.div
-                  className="h-full bg-black"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{
-                    duration: 2,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="mt-auto">
+          <Button 
+            onClick={generateAffirmation} 
+            className="w-full bg-gray-800 hover:bg-gray-900 text-white"
+            disabled={isLoading || (prompts.length === 0 && !searchQuery.trim())}
+          >
+            {isLoading ? 'Generating...' : 'Generate Affirmations'}
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -373,112 +330,53 @@ function SubliminalAudioPlayer() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl m-4">
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-lg font-semibold relative overflow-hidden">
-            <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
-              Audio
-            </span>
-            <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
-              firmations
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="visualization-type"
-              checked={visualizationType === 'frequency'}
-              onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
-            />
-            <Label htmlFor="visualization-type">
-              {visualizationType === 'wave' ? 'Wave' : 'Frequency'}
-            </Label>
-          </div>
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-3">
+        <div className="text-base font-semibold relative overflow-hidden">
+          <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
+            Audio
+          </span>
+          <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+            firmations
+          </span>
         </div>
-        <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" />
-        <canvas ref={canvasRef} width="300" height="100" className="w-full mb-4" />
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-muted-foreground">{formatTime(currentTime)}</span>
-          <span className="text-muted-foreground">{formatTime(duration)}</span>
-        </div>
-        <div className="flex justify-center space-x-4 mb-4">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={skipToStart}
-            className="group"
-          >
-            <SkipBackIcon className="h-4 w-4 group-active:text-orange-500" />
-          </Button>
-          <Button 
-            variant={isPlaying ? "default" : "outline"} 
-            size="icon" 
-            onClick={togglePlayPause}
-            className={`relative ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
-          >
-            {isPlaying ? (
-              <>
-                <PauseIcon className="h-4 w-4" />
-                <span className="absolute inset-0">
-                  <svg viewBox="0 0 100 100" className="w-full h-full animate-wave-emit">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="2" />
-                  </svg>
-                </span>
-              </>
-            ) : (
-              <PlayIcon className="h-4 w-4" />
-            )}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={skipToEnd}
-            className="group"
-          >
-            <SkipForwardIcon className="h-4 w-4 group-active:text-orange-500" />
-          </Button>
-        </div>
-        <div className="flex justify-between items-center mb-4">
-          <Select value={playbackRate.toString()} onValueChange={handleSpeedChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Playback Speed" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0.5">0.5x</SelectItem>
-              <SelectItem value="1">1x</SelectItem>
-              <SelectItem value="1.5">1.5x</SelectItem>
-              <SelectItem value="2">2x</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={voice} onValueChange={handleVoiceChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Voice" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Volume2 className="h-4 w-4" />
-          <div className="relative w-full">
-            <div
-              className="absolute inset-0 rounded-full overflow-hidden"
-              style={{
-                background: `linear-gradient(to right, #e6f2ff ${volume * 100}%, #0066cc ${volume * 100}%)`,
-              }}
-            ></div>
-            <Slider
-              value={[volume]}
-              max={1}
-              step={0.01}
-              onValueChange={handleVolumeChange}
-              className="relative z-10"
-            />
-          </div>
-        </div>
+        <Switch
+          id="visualization-type"
+          checked={visualizationType === 'frequency'}
+          onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
+        />
+      </div>
+      <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" className="hidden" />
+      <canvas ref={canvasRef} width="300" height="80" className="w-full mb-3" />
+      <div className="flex justify-between text-sm mb-2">
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+      <div className="flex justify-center space-x-3 mb-3">
+        <Button variant="outline" size="icon" onClick={skipToStart} className="w-10 h-10">
+          <SkipBackIcon className="h-5 w-5" />
+        </Button>
+        <Button 
+          variant={isPlaying ? "default" : "outline"} 
+          size="icon"
+          onClick={togglePlayPause}
+          className={`w-10 h-10 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
+        >
+          {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+        </Button>
+        <Button variant="outline" size="icon" onClick={skipToEnd} className="w-10 h-10">
+          <SkipForwardIcon className="h-5 w-5" />
+        </Button>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Volume2 className="h-5 w-5" />
+        <Slider
+          value={[volume]}
+          max={1}
+          step={0.01}
+          onValueChange={handleVolumeChange}
+          className="w-full"
+        />
       </div>
     </div>
   )
@@ -651,102 +549,64 @@ function AudioLayerPlayer() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl m-4">
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-lg font-semibold relative overflow-hidden">
-            <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
-              Audio
-            </span>
-            <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
-              Layer
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="visualization-type"
-              checked={visualizationType === 'frequency'}
-              onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
-            />
-            <Label htmlFor="visualization-type">
-              {visualizationType === 'wave' ? 'Wave' : 'Frequency'}
-            </Label>
-          </div>
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-base font-semibold relative overflow-hidden">
+          <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
+            Audio
+          </span>
+          <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+            Layer
+          </span>
         </div>
-        <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" />
-        <canvas ref={canvasRef} width="300" height="100" className="w-full mb-4" />
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-muted-foreground">{formatTime(currentTime)}</span>
-          <span className="text-muted-foreground">{formatTime(duration)}</span>
-        </div>
-        <div className="flex justify-center space-x-4 mb-4">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={skipToStart}
-            className="group"
-          >
-            <SkipBackIcon className="h-4 w-4 group-active:text-orange-500" />
-          </Button>
-          <Button 
-            variant={isPlaying ? "default" : "outline"} 
-            size="icon" 
-            onClick={togglePlayPause}
-            className={`relative ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
-          >
-            {isPlaying ? (
-              <>
-                <PauseIcon className="h-4 w-4" />
-                <span className="absolute inset-0">
-                  <svg viewBox="0 0 100 100" className="w-full h-full animate-wave-emit">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="2" />
-                  </svg>
-                </span>
-              </>
-            ) : (
-              <PlayIcon className="h-4 w-4" />
-            )}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={skipToEnd}
-            className="group"
-          >
-            <SkipForwardIcon className="h-4 w-4 group-active:text-orange-500" />
-          </Button>
-        </div>
-        <div className="flex justify-between items-center mb-4">
-          <Select value={audioLayer} onValueChange={handleAudioLayerChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select Audio Layer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="layer1">Rock Audio Layer</SelectItem>
-              <SelectItem value="layer2">Jazz Audio Layer</SelectItem>
-              <SelectItem value="layer3">Blues Audio Layer</SelectItem>
-              <SelectItem value="layer4">Pop Audio Layer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Volume2 className="h-4 w-4" />
-          <div className="relative w-full">
-            <div
-              className="absolute inset-0 rounded-full overflow-hidden"
-              style={{
-                background: `linear-gradient(to right, #e6f2ff ${volume * 100}%, #0066cc ${volume * 100}%)`,
-              }}
-            ></div>
-            <Slider
-              value={[volume]}
-              max={1}
-              step={0.01}
-              onValueChange={handleVolumeChange}
-              className="relative z-10"
-            />
-          </div>
-        </div>
+        <Switch
+          id="visualization-type"
+          checked={visualizationType === 'frequency'}
+          onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
+        />
+      </div>
+      <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" className="hidden" />
+      <canvas ref={canvasRef} width="300" height="60" className="w-full mb-2" />
+      <div className="flex justify-between text-xs mb-1">
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+      <div className="flex justify-center space-x-2 mb-2">
+        <Button variant="outline" size="sm" onClick={skipToStart} className="p-1">
+          <SkipBackIcon className="h-3 w-3" />
+        </Button>
+        <Button 
+          variant={isPlaying ? "default" : "outline"} 
+          size="sm"
+          onClick={togglePlayPause}
+          className={`p-1 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
+        >
+          {isPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
+        </Button>
+        <Button variant="outline" size="sm" onClick={skipToEnd} className="p-1">
+          <SkipForwardIcon className="h-3 w-3" />
+        </Button>
+      </div>
+      <Select value={audioLayer} onValueChange={handleAudioLayerChange} className="mb-2">
+        <SelectTrigger className="w-full text-xs py-1">
+          <SelectValue placeholder="Select Audio Layer" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="layer1">Rock Audio Layer</SelectItem>
+          <SelectItem value="layer2">Jazz Audio Layer</SelectItem>
+          <SelectItem value="layer3">Blues Audio Layer</SelectItem>
+          <SelectItem value="layer4">Pop Audio Layer</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="flex items-center space-x-1">
+        <Volume2 className="h-3 w-3 flex-shrink-0" />
+        <Slider
+          value={[volume]}
+          max={1}
+          step={0.01}
+          onValueChange={handleVolumeChange}
+          className="flex-grow"
+        />
       </div>
     </div>
   )
@@ -942,28 +802,28 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
 
   return (
     <div className="container mx-auto p-4 h-screen">
-      <div className="grid grid-cols-4 grid-rows-2 gap-4 h-full">
+      <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
         <div className="col-span-2 row-span-1">
           <AffirmationSearch onAffirmationGenerated={handleAffirmationGenerated} />
         </div>
-        <div className="col-span-1 row-span-1">
+        <div className="col-span-1 row-span-2">
           <Card className="h-full">
-            <CardContent className="p-4">
+            <CardContent className="p-4 h-full flex flex-col">
               <SubliminalAudioPlayer />
             </CardContent>
           </Card>
         </div>
-        <div className="col-span-1 row-span-1">
+        <div className="col-span-1 row-span-2">
           <Card className="h-full">
-            <CardContent className="p-4">
+            <CardContent className="p-4 h-full flex flex-col">
               <AudioLayerPlayer />
             </CardContent>
           </Card>
         </div>
-        <div className="col-span-2 row-span-1">
+        <div className="col-span-2 row-span-5">
           <AffirmationList affirmations={generatedAffirmations} />
         </div>
-        <div className="col-span-2 row-span-1">
+        <div className="col-span-2 row-span-4">
           <Card className="h-full overflow-hidden">
             <CardContent className="p-4 flex flex-col h-full">
               <h2 className="text-lg font-semibold mb-2">Audio Controls</h2>
