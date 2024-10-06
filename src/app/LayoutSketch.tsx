@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles } from "lucide-react"
+import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -22,10 +22,11 @@ const inspirationPrompts = [
   "optimistic", "courageous", "grateful", "adaptable", "empathetic",
 ]
 
-function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated: (affirmations: string[]) => void }) {
+function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated: (affirmations: string[], audioUrl: string) => void }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [prompts, setPrompts] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isTtsLoading, setIsTtsLoading] = useState(false)
 
   const addPrompt = () => {
     if (searchQuery.trim() !== "" && !prompts.includes(searchQuery.trim())) {
@@ -72,10 +73,32 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
 
       const data = await response.json();
       const newAffirmations = data.affirmations;
-      onAffirmationGenerated(newAffirmations);
+
+      console.log('Generated affirmations:', newAffirmations);
+      onAffirmationGenerated(newAffirmations, ''); // Pass empty string for audioUrl initially
+
+      console.log('Sending request to text-to-speech API...');
+      const ttsResponse = await fetch('/api/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          text: newAffirmations.join(' ')
+        }),
+      });
+
+      if (!ttsResponse.ok) {
+        const errorData = await ttsResponse.json();
+        console.error('Text-to-speech error details:', errorData);
+        throw new Error(`Failed to convert affirmations to speech: ${errorData.error || errorData.details || ttsResponse.statusText}`);
+      }
+
+      const ttsData = await ttsResponse.json();
+      onAffirmationGenerated(newAffirmations, ttsData.audioUrl);
       setSearchQuery("")
     } catch (error) {
-      console.error('Error generating affirmations:', error);
+      console.error('Error generating affirmations or converting to speech:', error);
       // Handle error (e.g., show error message to user)
     } finally {
       setIsLoading(false)
@@ -85,8 +108,8 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
   return (
     <Card className="h-full">
       <CardContent className="p-4 flex flex-col h-full">
-        <h2 className="text-xl font-bold mb-2">Affirmation Search</h2>
-        <div className="flex space-x-2 mb-2">
+        <h2 className="text-xl font-bold mb-4">Affirmation Search</h2>
+        <div className="flex space-x-2 mb-4">
           <Input
             type="text"
             placeholder="Enter your prompt..."
@@ -98,11 +121,11 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
           <Button onClick={addPrompt} size="sm">Add</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="px-2 w-16 relative overflow-hidden">
-                <Sparkles className="h-8 w-8 text-purple-600" />
+              <Button variant="outline" size="sm" className="px-2 w-10 relative overflow-hidden">
+                <Sparkles className="h-4 w-4 text-purple-600" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-112">
+            <DropdownMenuContent className="w-56">
               {inspirationPrompts.map((prompt) => (
                 <DropdownMenuItem
                   key={prompt}
@@ -117,58 +140,72 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex flex-wrap gap-1 mb-2 overflow-y-auto flex-grow">
-          <AnimatePresence>
-            {prompts.map((prompt) => (
-              <motion.span 
-                key={prompt}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.2 }}
-                className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs flex items-center"
-              >
-                {prompt}
-                <button 
-                  onClick={() => removePrompt(prompt)}
-                  className="ml-1 focus:outline-none text-purple-600 hover:text-purple-800"
-                  aria-label={`Remove ${prompt}`}
+        <div className="flex-grow overflow-y-auto mb-4">
+          <div className="flex flex-wrap gap-2">
+            <AnimatePresence>
+              {prompts.map((prompt) => (
+                <motion.span 
+                  key={prompt}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm flex items-center"
                 >
-                  <X size={12} />
-                </button>
-              </motion.span>
-            ))}
-          </AnimatePresence>
+                  {prompt}
+                  <button 
+                    onClick={() => removePrompt(prompt)}
+                    className="ml-2 focus:outline-none text-purple-600 hover:text-purple-800"
+                    aria-label={`Remove ${prompt}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </motion.span>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
-        <div className="mt-auto">
-          <Button 
-            onClick={generateAffirmation} 
-            className="w-full bg-gray-800 hover:bg-gray-900 text-white"
-            disabled={isLoading || (prompts.length === 0 && !searchQuery.trim())}
-          >
-            {isLoading ? 'Generating...' : 'Generate Affirmations'}
-          </Button>
-        </div>
+        <Button 
+          onClick={generateAffirmation} 
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg"
+          disabled={isLoading || (prompts.length === 0 && !searchQuery.trim())}
+        >
+          {isLoading ? 'Generating...' : 'Generate Affirmations'}
+        </Button>
+        {isTtsLoading && (
+          <p className="text-sm text-gray-500 mt-2">Converting to speech...</p>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-function SubliminalAudioPlayer() {
+function SubliminalAudioPlayer({ audioUrl, isLoading }: { audioUrl: string | null, isLoading: boolean }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [playbackRate, setPlaybackRate] = useState(1)
-  const [voice, setVoice] = useState('default')
   const [volume, setVolume] = useState(1)
-  const [visualizationType, setVisualizationType] = useState<'wave' | 'frequency'>('wave')
+  const [speedFactor, setSpeedFactor] = useState(1)
   const [isAnimating, setIsAnimating] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>()
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
+
+  const speedOptions = [
+    { value: 0.5, label: '0.5x' },
+    { value: 0.75, label: '0.75x' },
+    { value: 1, label: 'Normal' },
+    { value: 1.25, label: '1.25x' },
+    { value: 1.5, label: '1.5x' },
+    { value: 2, label: '2x' },
+  ]
+
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.load();
+    }
+  }, [audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current
@@ -185,100 +222,16 @@ function SubliminalAudioPlayer() {
   }, [])
 
   useEffect(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-      analyserRef.current = audioContextRef.current.createAnalyser()
-      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current!)
-      sourceRef.current.connect(analyserRef.current)
-      analyserRef.current.connect(audioContextRef.current.destination)
-    }
-
-    if (isPlaying) {
-      animationRef.current = requestAnimationFrame(animate)
-    } else {
-      cancelAnimationFrame(animationRef.current!)
-    }
-    return () => cancelAnimationFrame(animationRef.current!)
-  }, [isPlaying, visualizationType])
-
-  useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume
     }
   }, [volume])
 
-  const animate = () => {
-    const canvas = canvasRef.current
-    const analyser = analyserRef.current
-    if (canvas && analyser) {
-      const ctx = canvas.getContext('2d')!
-      const WIDTH = canvas.width
-      const HEIGHT = canvas.height
-
-      if (visualizationType === 'wave') {
-        analyser.fftSize = 2048
-        const bufferLength = analyser.fftSize
-        const dataArray = new Uint8Array(bufferLength)
-        analyser.getByteTimeDomainData(dataArray)
-
-        ctx.fillStyle = 'rgb(255, 255, 255)'
-        ctx.fillRect(0, 0, WIDTH, HEIGHT)
-        ctx.lineWidth = 2
-        ctx.strokeStyle = 'rgb(0, 0, 0)'
-        ctx.beginPath()
-
-        const sliceWidth = WIDTH * 1.0 / bufferLength
-        let x = 0
-
-        for (let i = 0; i < bufferLength; i++) {
-          const v = dataArray[i] / 128.0
-          const y = v * HEIGHT / 2
-
-          if (i === 0) {
-            ctx.moveTo(x, y)
-          } else {
-            ctx.lineTo(x, y)
-          }
-
-          x += sliceWidth
-        }
-
-        ctx.lineTo(canvas.width, canvas.height / 2)
-        ctx.stroke()
-      } else {
-        analyser.fftSize = 2048
-        const bufferLength = analyser.frequencyBinCount
-        const dataArray = new Uint8Array(bufferLength)
-        analyser.getByteFrequencyData(dataArray)
-
-        ctx.fillStyle = 'rgb(255, 255, 255)'
-        ctx.fillRect(0, 0, WIDTH, HEIGHT)
-
-        const barWidth = (WIDTH / bufferLength) * 2.5
-        let x = 0
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * HEIGHT
-
-          const gradient = ctx.createLinearGradient(0, HEIGHT, 0, HEIGHT - barHeight)
-          gradient.addColorStop(0, 'rgb(0,0,0)')
-          gradient.addColorStop(1, 'rgb(100,100,100)')
-          
-          ctx.fillStyle = gradient
-          ctx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight)
-
-          x += barWidth + 1
-        }
-
-        ctx.fillStyle = 'rgb(0, 0, 0)'
-        ctx.font = '10px Arial'
-        ctx.fillText('0 Hz', 0, HEIGHT - 5)
-        ctx.fillText('10 kHz', WIDTH / 2, HEIGHT - 5)
-        ctx.fillText('20 kHz', WIDTH - 40, HEIGHT - 5)
-      }
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speedFactor;
     }
-    animationRef.current = requestAnimationFrame(animate)
-  }
+  }, [speedFactor]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current
@@ -306,22 +259,13 @@ function SubliminalAudioPlayer() {
     }
   }
 
-  const handleSpeedChange = (value: string) => {
-    const speed = parseFloat(value)
-    setPlaybackRate(speed)
-    if (audioRef.current) {
-      audioRef.current.playbackRate = speed
-    }
-  }
-
-  const handleVoiceChange = (value: string) => {
-    setVoice(value)
-    // In a real implementation, you would change the audio source here
-  }
-
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0])
   }
+
+  const handleSpeedChange = (value: string) => {
+    setSpeedFactor(Number(value));
+  };
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
@@ -340,20 +284,27 @@ function SubliminalAudioPlayer() {
             firmations
           </span>
         </div>
-        <Switch
-          id="visualization-type"
-          checked={visualizationType === 'frequency'}
-          onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
-        />
+        <Select value={speedFactor.toString()} onValueChange={handleSpeedChange}>
+          <SelectTrigger className="w-[100px]">
+            <SelectValue placeholder="Speed" />
+          </SelectTrigger>
+          <SelectContent>
+            {speedOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value.toString()}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" className="hidden" />
+      <audio ref={audioRef} className="hidden" />
       <canvas ref={canvasRef} width="300" height="80" className="w-full mb-3" />
       <div className="flex justify-between text-sm mb-2">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>
       <div className="flex justify-center space-x-3 mb-3">
-        <Button variant="outline" size="icon" onClick={skipToStart} className="w-10 h-10">
+        <Button variant="outline" size="icon" onClick={skipToStart} className="w-10 h-10" disabled={isLoading}>
           <SkipBackIcon className="h-5 w-5" />
         </Button>
         <Button 
@@ -361,10 +312,17 @@ function SubliminalAudioPlayer() {
           size="icon"
           onClick={togglePlayPause}
           className={`w-10 h-10 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
+          disabled={isLoading}
         >
-          {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+          {isLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isPlaying ? (
+            <PauseIcon className="h-5 w-5" />
+          ) : (
+            <PlayIcon className="h-5 w-5" />
+          )}
         </Button>
-        <Button variant="outline" size="icon" onClick={skipToEnd} className="w-10 h-10">
+        <Button variant="outline" size="icon" onClick={skipToEnd} className="w-10 h-10" disabled={isLoading}>
           <SkipForwardIcon className="h-5 w-5" />
         </Button>
       </div>
@@ -550,7 +508,7 @@ function AudioLayerPlayer() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-3">
         <div className="text-base font-semibold relative overflow-hidden">
           <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
             Audio
@@ -559,37 +517,26 @@ function AudioLayerPlayer() {
             Layer
           </span>
         </div>
-        <Switch
-          id="visualization-type"
-          checked={visualizationType === 'frequency'}
-          onCheckedChange={(checked) => setVisualizationType(checked ? 'frequency' : 'wave')}
-        />
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="icon" onClick={skipToStart} className="w-8 h-8">
+            <SkipBackIcon className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant={isPlaying ? "default" : "outline"} 
+            size="icon"
+            onClick={togglePlayPause}
+            className={`w-8 h-8 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
+          >
+            {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+          </Button>
+          <Button variant="outline" size="icon" onClick={skipToEnd} className="w-8 h-8">
+            <SkipForwardIcon className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      <audio ref={audioRef} src="https://v0.dev-public.vercel.app/audio/placeholder.mp3" className="hidden" />
-      <canvas ref={canvasRef} width="300" height="60" className="w-full mb-2" />
-      <div className="flex justify-between text-xs mb-1">
-        <span>{formatTime(currentTime)}</span>
-        <span>{formatTime(duration)}</span>
-      </div>
-      <div className="flex justify-center space-x-2 mb-2">
-        <Button variant="outline" size="sm" onClick={skipToStart} className="p-1">
-          <SkipBackIcon className="h-3 w-3" />
-        </Button>
-        <Button 
-          variant={isPlaying ? "default" : "outline"} 
-          size="sm"
-          onClick={togglePlayPause}
-          className={`p-1 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
-        >
-          {isPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
-        </Button>
-        <Button variant="outline" size="sm" onClick={skipToEnd} className="p-1">
-          <SkipForwardIcon className="h-3 w-3" />
-        </Button>
-      </div>
-      <Select value={audioLayer} onValueChange={handleAudioLayerChange} className="mb-2">
+      <Select value={audioLayer} onValueChange={handleAudioLayerChange}>
         <SelectTrigger className="w-full text-xs py-1">
-          <SelectValue placeholder="Select Audio Layer" />
+          <SelectValue placeholder="Select Layer" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="layer1">Rock Audio Layer</SelectItem>
@@ -598,14 +545,20 @@ function AudioLayerPlayer() {
           <SelectItem value="layer4">Pop Audio Layer</SelectItem>
         </SelectContent>
       </Select>
-      <div className="flex items-center space-x-1">
-        <Volume2 className="h-3 w-3 flex-shrink-0" />
+      <audio ref={audioRef} className="hidden" />
+      <canvas ref={canvasRef} width="300" height="80" className="w-full mb-3" />
+      <div className="flex justify-between text-sm mb-2">
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Volume2 className="h-5 w-5" />
         <Slider
           value={[volume]}
           max={1}
           step={0.01}
           onValueChange={handleVolumeChange}
-          className="flex-grow"
+          className="w-full"
         />
       </div>
     </div>
@@ -613,42 +566,22 @@ function AudioLayerPlayer() {
 }
 
 function AffirmationList({ affirmations }: { affirmations: string[] }) {
-  const [isAtBottom, setIsAtBottom] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (scrollAreaRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current
-        const isBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 1
-        setIsAtBottom(isBottom)
-      }
-    }
-
-    const scrollArea = scrollAreaRef.current
-    if (scrollArea) {
-      scrollArea.addEventListener('scroll', handleScroll)
-    }
-
-    return () => {
-      if (scrollArea) {
-        scrollArea.removeEventListener('scroll', handleScroll)
-      }
-    }
-  }, [])
-
   return (
-    <Card className={`w-full h-full ${isAtBottom ? 'animate-vibrate' : ''}`}>
+    <Card className="w-full h-full">
       <CardContent className="p-4 h-full flex flex-col">
         <h2 className="text-2xl font-bold mb-4">Generated Affirmations</h2>
-        <ScrollArea className="flex-grow pr-4" ref={scrollAreaRef}>
-          {affirmations.map((affirmation, index) => (
-            <div key={index} className="mb-4 last:mb-0">
-              <p className="text-lg text-gray-700 p-4 bg-white border border-gray-200 rounded-lg affirmation-hover hover:bg-purple-100 hover:text-purple-800 transition-colors duration-300">
-                {affirmation}
-              </p>
-            </div>
-          ))}
+        <ScrollArea className="flex-grow pr-4">
+          {affirmations.length > 0 ? (
+            affirmations.map((affirmation, index) => (
+              <div key={index} className="mb-4 last:mb-0">
+                <p className="text-lg text-gray-700 p-4 bg-white border border-gray-200 rounded-lg affirmation-hover hover:bg-purple-100 hover:text-purple-800 transition-colors duration-300">
+                  {affirmation}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 italic">No affirmations generated yet.</p>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>
@@ -680,13 +613,21 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLooping, setIsLooping] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [generatedAffirmations, setGeneratedAffirmations] = useState<string[]>([])
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [isTtsLoading, setIsTtsLoading] = useState(false)
 
-  const handleAffirmationGenerated = (newAffirmations: string[]) => {
-    setGeneratedAffirmations(newAffirmations)
+  const handleAffirmationGenerated = (affirmations: string[], newAudioUrl: string) => {
+    console.log('Received affirmations:', affirmations);
+    setGeneratedAffirmations(affirmations);
+    setIsTtsLoading(true); // Set loading to true when starting TTS process
+    if (newAudioUrl) {
+      setAudioUrl(newAudioUrl);
+      setIsTtsLoading(false); // Set loading to false when TTS is complete
+    }
   }
 
   const formatTime = (seconds: number) => {
@@ -803,13 +744,13 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
   return (
     <div className="container mx-auto p-4 h-screen">
       <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
-        <div className="col-span-2 row-span-1">
+        <div className="col-span-2 row-span-2">
           <AffirmationSearch onAffirmationGenerated={handleAffirmationGenerated} />
         </div>
         <div className="col-span-1 row-span-2">
           <Card className="h-full">
             <CardContent className="p-4 h-full flex flex-col">
-              <SubliminalAudioPlayer />
+              <SubliminalAudioPlayer audioUrl={audioUrl} isLoading={isTtsLoading} />
             </CardContent>
           </Card>
         </div>
@@ -820,7 +761,7 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
             </CardContent>
           </Card>
         </div>
-        <div className="col-span-2 row-span-5">
+        <div className="col-span-2 row-span-4">
           <AffirmationList affirmations={generatedAffirmations} />
         </div>
         <div className="col-span-2 row-span-4">
