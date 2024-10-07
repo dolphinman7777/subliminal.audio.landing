@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2 } from "lucide-react"
+import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2, Download, CreditCard } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -16,6 +16,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const inspirationPrompts = [
   "confident", "creative", "resilient", "compassionate", "determined",
@@ -600,7 +603,7 @@ interface LayoutSketchProps {
   initialLayout?: any; // Make this optional and replace 'any' with the correct type
 }
 
-export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
+export function LayoutSketch({ initialLayout }: LayoutSketchProps) {
   useEffect(() => {
     // Initialize layout
     if (initialLayout) {
@@ -741,6 +744,55 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
     )
   }
 
+  const [isSplit, setIsSplit] = useState(false)
+
+  const handlePayment = async (method: 'PayPal' | 'Card') => {
+    console.log(`Processing ${method} payment`);
+    if (method === 'Card') {
+      try {
+        console.log('Fetching /api/create-payment-intent');
+        const response = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log('Response status:', response.status);
+        const responseData = await response.text();
+        console.log('Response data:', responseData);
+
+        if (!response.ok) {
+          throw new Error(`Failed to create Stripe session: ${responseData}`);
+        }
+
+        const { sessionId } = JSON.parse(responseData);
+        console.log('Session ID:', sessionId);
+
+        const stripe = await stripePromise;
+        
+        if (!stripe) {
+          throw new Error('Stripe failed to load');
+        }
+
+        console.log('Redirecting to Stripe checkout');
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+        
+        if (error) {
+          console.error('Stripe redirect error:', error);
+          throw error;
+        }
+      } catch (error) {
+        console.error('Detailed error:', error);
+        alert('Failed to process payment. Please check the console for more details.');
+      }
+    } else if (method === 'PayPal') {
+      // Implement PayPal payment logic here
+      console.log('PayPal payment not implemented yet');
+    }
+    setIsSplit(false);
+  };
+
   return (
     <div className="container mx-auto p-4 h-screen">
       <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
@@ -768,6 +820,7 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
           <Card className="h-full overflow-hidden">
             <CardContent className="p-4 flex flex-col h-full">
               <h2 className="text-lg font-semibold mb-2">Audio Controls</h2>
+              
               <div className="space-y-2 flex-grow overflow-y-auto">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
@@ -815,54 +868,85 @@ export default function LayoutSketch({ initialLayout }: LayoutSketchProps) {
                   <p className="text-lg font-bold text-secondary-foreground">{formatTime(currentTime)} / {formatTime(trackDuration)}</p>
                   <p className="text-xs text-secondary-foreground/80">current / total</p>
                 </div>
-              </div>
-              
-              <div className="bg-muted p-3 rounded-lg mt-2">
-                <div className="flex items-center justify-between space-x-2 mb-2">
-                  <Button
-                    onClick={() => handleSkip('back')}
-                    variant="outline"
-                    size="icon"
-                    className="w-8 h-8 rounded-full"
-                  >
-                    <SkipBackIcon className="h-4 w-4" />
-                  </Button>
-                  
-                  <motion.button
-                    onClick={handlePlay}
-                    className="flex-grow py-2 px-4 rounded-full text-white text-sm font-semibold focus:outline-none"
-                    animate={{
-                      backgroundColor: isPlaying ? "#22c55e" : "#3b82f6",
-                    }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {isPlaying ? (
-                      <PauseIcon className="w-5 h-5 mx-auto" />
-                    ) : (
-                      <PlayIcon className="w-5 h-5 mx-auto" />
-                    )}
-                  </motion.button>
-                  
-                  <Button
-                    onClick={() => handleSkip('forward')}
-                    variant="outline"
-                    size="icon"
-                    className="w-8 h-8 rounded-full"
-                  >
-                    <SkipForwardIcon className="h-4 w-4" />
-                  </Button>
+
+                {/* Moved button to this position */}
+                <div className="bg-muted p-3 rounded-lg mt-2">
+                  <div className="flex items-center justify-between space-x-2 mb-2">
+                    <Button
+                      onClick={() => handleSkip('back')}
+                      variant="outline"
+                      size="icon"
+                      className="w-8 h-8 rounded-full"
+                    >
+                      <SkipBackIcon className="h-4 w-4" />
+                    </Button>
+                    
+                    <motion.button
+                      onClick={handlePlay}
+                      className="flex-grow py-2 px-4 rounded-full text-white text-sm font-semibold focus:outline-none"
+                      animate={{
+                        backgroundColor: isPlaying ? "#22c55e" : "#3b82f6",
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {isPlaying ? (
+                        <PauseIcon className="w-5 h-5 mx-auto" />
+                      ) : (
+                        <PlayIcon className="w-5 h-5 mx-auto" />
+                      )}
+                    </motion.button>
+                    
+                    <Button
+                      onClick={() => handleSkip('forward')}
+                      variant="outline"
+                      size="icon"
+                      className="w-8 h-8 rounded-full"
+                    >
+                      <SkipForwardIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <RepeatIcon className={`h-4 w-4 ${isLooping ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <Switch
+                      id="loop-mode"
+                      checked={isLooping}
+                      onCheckedChange={handleLoopToggle}
+                    />
+                    <label htmlFor="loop-mode" className="text-xs font-medium">
+                      Loop TTS
+                    </label>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center space-x-2">
-                  <RepeatIcon className={`h-4 w-4 ${isLooping ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <Switch
-                    id="loop-mode"
-                    checked={isLooping}
-                    onCheckedChange={handleLoopToggle}
-                  />
-                  <label htmlFor="loop-mode" className="text-xs font-medium">
-                    Loop TTS
-                  </label>
+
+                {/* Payment button */}
+                <div className="relative w-full h-12 mt-2">
+                  {!isSplit ? (
+                    <Button 
+                      className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+                      onClick={() => setIsSplit(true)}
+                    >
+                      <Download className="mr-2 h-5 w-5" />
+                      Download (€3.00)
+                    </Button>
+                  ) : (
+                    <div className="flex justify-between w-full h-full space-x-2">
+                      <Button 
+                        className="w-1/2 h-full bg-blue-500 hover:bg-blue-600 text-white font-bold transition-all duration-300 ease-in-out"
+                        onClick={() => handlePayment('PayPal')}
+                      >
+                        <CreditCard className="mr-2 h-5 w-5" />
+                        PayPal
+                      </Button>
+                      <Button 
+                        className="w-1/2 h-full bg-purple-500 hover:bg-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+                        onClick={() => handlePayment('Card')}
+                      >
+                        <CreditCard className="mr-2 h-5 w-5" />
+                        Card
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

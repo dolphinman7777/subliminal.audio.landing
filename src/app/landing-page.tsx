@@ -1,7 +1,7 @@
 "use client"
-import React, { ReactNode } from 'react'
+import React, { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image' // Add this import
+import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Sparkles, Brain, Zap, Shield } from 'lucide-react'
 import { cn } from "@/lib/utils"
@@ -10,6 +10,22 @@ import { PulsatingButton } from "@/components/ui/pulsating-button"
 import { keyframes } from "@emotion/react"
 import HyperText from "@/components/ui/hyper-text"
 import DotPattern from "@/components/ui/dot-pattern"
+import { AnimatePresence, motion } from 'framer-motion';
+import { SignUpButton, SignInButton, useAuth } from "@clerk/nextjs";
+import { useRouter } from 'next/navigation';
+
+// Add this array of sentences at the top of your file, outside of any component
+const mindSoftwareSentences = [
+  "Upgrade the software running in your mind",
+  "Reprogram the way your mind operates",
+  "Upgrade the mental software shaping your thoughts",
+  "Install a new mindset for better outcomes",
+  "Rewrite the mental code that guides your thinking",
+  "Refresh the system driving your thoughts",
+  "Transform the inner programming that directs your life",
+  "Update the mental framework that runs your thoughts",
+  "Shift the mental software that influences your reality"
+];
 
 interface RetroGridProps {
   className?: string;
@@ -168,7 +184,19 @@ const rippleKeyframes = keyframes`
   }
 `;
 
-export default function HomePage() {
+const HomePage: React.FC = () => {
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentSentenceIndex((prevIndex) => 
+        (prevIndex + 1) % mindSoftwareSentences.length
+      );
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <DotPattern 
@@ -177,13 +205,13 @@ export default function HomePage() {
         cx={2} 
         cy={2} 
         cr={1.5} 
-        className="opacity-30 dark:opacity-20 absolute inset-0 z-0" // Increased opacity
+        className="opacity-30 dark:opacity-20 absolute inset-0 z-0"
       />
       <RetroGrid className="absolute inset-0 z-10" angle={75} opacity={0.3} />
       <div className="relative z-20 flex flex-col min-h-screen">
-        <header className="px-4 lg:px-6 h-32 flex items-center justify-between">
+        <header className="fixed top-0 left-0 right-0 px-4 lg:px-6 h-32 flex items-center justify-between bg-gradient-to-b from-gray-50 to-transparent dark:from-gray-900 z-50">
           <Link href="/" className="flex items-center">
-            <div className="rounded-lg shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)] dark:shadow-[0_20px_50px_rgba(255,_255,_255,_0.2)]">
+            <div className="rounded-lg shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)] dark:shadow-[0_20px_50px_rgba(255,_255,_255,_0.2)] transition-all duration-300 hover:scale-105">
               <Image
                 src="/head.svg"
                 alt="Subliminal.Studio Logo"
@@ -194,17 +222,23 @@ export default function HomePage() {
             </div>
           </Link>
           <nav className="flex gap-4">
-            <Button variant="ghost" className="text-base font-medium">Log in</Button>
-            <PulsatingButton 
-              className="text-base font-medium"
-              pulseColor="#4F46E5"
-              duration="2s"
-            >
-              Sign up
-            </PulsatingButton>
+            <SignInButton mode="modal">
+              <Button variant="ghost" className="text-base font-medium">
+                Log in
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <PulsatingButton 
+                className="text-base font-medium"
+                pulseColor="#4F46E5"
+                duration="2s"
+              >
+                Sign up
+              </PulsatingButton>
+            </SignUpButton>
           </nav>
         </header>
-        <main className="flex-1 flex flex-col items-center justify-start py-20">
+        <main className="flex-1 flex flex-col items-center justify-start py-20 mt-32">
           <div className="container px-4 md:px-6 mb-32">
             <div className="flex flex-col items-center space-y-4 text-center">
               <HyperText
@@ -213,13 +247,22 @@ export default function HomePage() {
                 duration={1500}
                 animateOnLoad={true}
               />
-              <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-                Unlock the power of your subconscious. Create, customize, and manifest your desires with AI-powered subliminal messaging.
-              </p>
-              <div className="space-x-4 mt-8">
-                <RainbowButton>Get Started</RainbowButton>
-                <Button variant="outline" className="text-purple-600 border-purple-600 hover:bg-purple-100 dark:text-purple-400 dark:border-purple-400 dark:hover:bg-purple-900">Learn More</Button>
-              </div>
+              <AnimatePresence mode="sync">
+                <motion.div
+                  key={currentSentenceIndex}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <HyperText
+                    text={mindSoftwareSentences[currentSentenceIndex]}
+                    className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400"
+                    duration={800}
+                    animateOnLoad={false}
+                  />
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
           <div className="container px-4 md:px-6 mb-32">
@@ -297,3 +340,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+export default HomePage;

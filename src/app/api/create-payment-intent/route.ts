@@ -7,7 +7,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
+    console.log('Received request to create payment intent');
     const origin = req.headers.get('origin') || 'http://localhost:3000';
+    console.log('Origin:', origin);
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -23,13 +26,14 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}`, // This will return the user to the main page of your app
+      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}`,
     });
 
+    console.log('Stripe session created:', session.id);
     return NextResponse.json({ sessionId: session.id });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
+    console.error('Detailed error creating checkout session:', error);
+    return NextResponse.json({ error: 'Failed to create checkout session', details: error.message }, { status: 500 });
   }
 }
