@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +24,7 @@ const inspirationPrompts = [
   "Graceful flow"
 ]
 
-export default function Component() {
+export function AffirmationPrompt() {
   const [prompt, setPrompt] = useState('')
   const [tags, setTags] = useState<string[]>(["Success", "Maths", "Divinity"])
 

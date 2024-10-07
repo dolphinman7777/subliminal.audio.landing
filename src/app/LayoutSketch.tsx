@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { loadStripe } from '@stripe/stripe-js';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -603,14 +605,8 @@ interface LayoutSketchProps {
   initialLayout?: any; // Make this optional and replace 'any' with the correct type
 }
 
-export function LayoutSketch({ initialLayout }: LayoutSketchProps) {
-  useEffect(() => {
-    // Initialize layout
-    if (initialLayout) {
-      // Do something with initialLayout
-    }
-  }, [initialLayout]);
-
+const LayoutSketch: React.FC = () => {
+  const router = useRouter();
   const [trackDuration, setTrackDuration] = useState(60)
   const [ttsDuration, setTtsDuration] = useState(10)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -793,8 +789,12 @@ export function LayoutSketch({ initialLayout }: LayoutSketchProps) {
     setIsSplit(false);
   };
 
+  const handleNavigateToLanding = () => {
+    router.push('/');
+  };
+
   return (
-    <div className="container mx-auto p-4 h-screen">
+    <div className="container mx-auto p-4 h-screen relative">
       <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
         <div className="col-span-2 row-span-2">
           <AffirmationSearch onAffirmationGenerated={handleAffirmationGenerated} />
@@ -954,6 +954,23 @@ export function LayoutSketch({ initialLayout }: LayoutSketchProps) {
         </div>
       </div>
       <audio ref={audioRef} />
+      
+      {/* Navigation button */}
+      <button
+        onClick={handleNavigateToLanding}
+        className="fixed bottom-8 right-8 z-50 transition-transform hover:scale-110"
+        aria-label="Go to Landing Page"
+      >
+        <Image
+          src="/head.svg"
+          alt="Go to Landing Page"
+          width={80}
+          height={80}
+          className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
+        />
+      </button>
     </div>
   )
 }
+
+export default LayoutSketch;

@@ -21,6 +21,15 @@ export default function RootLayout({
         <html lang="en">
           <head>
             <link rel="icon" href="/head.svg" type="image/svg+xml" />
+            {/* Remove or update this line */}
+            {/* <link
+              rel="preload"
+              href="/fonts/your-main-font.woff2"
+              as="font"
+              type="font/woff2"
+              crossOrigin="anonymous"
+            /> */}
+            {/* Add similar preload links for other fonts you're using */}
           </head>
           <body>
             <React.StrictMode>

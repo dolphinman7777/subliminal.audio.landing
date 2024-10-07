@@ -1,9 +1,9 @@
 "use client"
-import React, { ReactNode, useState, useEffect } from 'react'
+import React, { ReactNode, useState, useLayoutEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
-import { Sparkles, Brain, Zap, Shield } from 'lucide-react'
+import { Sparkles, Brain, Zap, Shield, Headphones } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { ArrowRightIcon } from "@radix-ui/react-icons"
 import { PulsatingButton } from "@/components/ui/pulsating-button"
@@ -111,6 +111,12 @@ const BentoGrid = ({
   );
 };
 
+// Add this keyframe animation
+const glowAnimation = keyframes`
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(147, 51, 234, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(147, 51, 234, 0.9)); }
+`;
+
 const BentoCard = ({
   name,
   className,
@@ -131,7 +137,7 @@ const BentoCard = ({
   <div
     key={name}
     className={cn(
-      "group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl p-8", // Increased padding and rounded corners
+      "group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl p-8",
       // light styles
       "bg-white [box-shadow:0_0_0_1px_rgba(0,0,0,.03),0_2px_4px_rgba(0,0,0,.05),0_12px_24px_rgba(0,0,0,.05)]",
       // dark styles
@@ -141,7 +147,12 @@ const BentoCard = ({
   >
     <div>{background}</div>
     <div className="pointer-events-none z-10 flex transform-gpu flex-col gap-2 transition-all duration-300 group-hover:-translate-y-10">
-      <Icon className="h-16 w-16 origin-left transform-gpu text-neutral-700 transition-all duration-300 ease-in-out group-hover:scale-75 dark:text-neutral-300" />
+      <Icon 
+        className={cn(
+          "h-16 w-16 origin-left transform-gpu text-neutral-700 transition-all duration-300 ease-in-out group-hover:scale-75 dark:text-neutral-300",
+          name === "A.I Powered Affirmation Generation" && "animate-glow" // Apply animation only to the Brain icon
+        )}
+      />
       <h3 className="text-2xl font-semibold text-neutral-700 dark:text-neutral-300">
         {name}
       </h3>
@@ -184,18 +195,22 @@ const rippleKeyframes = keyframes`
   }
 `;
 
-const HomePage: React.FC = () => {
+const LandingPage: React.FC = () => {
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentSentenceIndex((prevIndex) => 
         (prevIndex + 1) % mindSoftwareSentences.length
       );
-    }, 1000);
+    }, 5000);
 
     return () => clearInterval(intervalId);
   }, []);
+
+  // Remove the useEffect hook that was causing the redirection
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -218,6 +233,7 @@ const HomePage: React.FC = () => {
                 width={120}
                 height={120}
                 className="w-30 h-30"
+                priority
               />
             </div>
           </Link>
@@ -236,6 +252,15 @@ const HomePage: React.FC = () => {
                 Sign up
               </PulsatingButton>
             </SignUpButton>
+            {isSignedIn && (
+              <Button 
+                variant="outline" 
+                className="text-base font-medium"
+                onClick={() => router.push('/dashboard')}
+              >
+                Go to Dashboard
+              </Button>
+            )}
           </nav>
         </header>
         <main className="flex-1 flex flex-col items-center justify-start py-20 mt-32">
@@ -247,98 +272,84 @@ const HomePage: React.FC = () => {
                 duration={1500}
                 animateOnLoad={true}
               />
-              <AnimatePresence mode="sync">
-                <motion.div
-                  key={currentSentenceIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <HyperText
-                    text={mindSoftwareSentences[currentSentenceIndex]}
-                    className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400"
-                    duration={800}
-                    animateOnLoad={false}
-                  />
-                </motion.div>
-              </AnimatePresence>
+              <div className="h-20 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSentenceIndex}
+                    initial={{ opacity: 0, transform: 'translateY(20px)' }}
+                    animate={{ opacity: 1, transform: 'translateY(0)' }}
+                    exit={{ opacity: 0, transform: 'translateY(-20px)' }}
+                    transition={{ duration: 0.5 }}
+                    className="transition-all duration-500 ease-in-out"
+                  >
+                    <HyperText
+                      text={mindSoftwareSentences[currentSentenceIndex]}
+                      className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400"
+                      duration={800}
+                      animateOnLoad={false}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
           </div>
           <div className="container px-4 md:px-6 mb-32">
             <h2 className="text-3xl font-bold text-center mb-16 text-gray-800 dark:text-white">Our Features</h2>
             <BentoGrid>
               <BentoCard
-                name="AI-Powered Customization"
+                name="A.I Powered Affirmation Generation"
                 className="md:col-span-2"
                 background={<div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700" />}
                 Icon={Brain}
-                description="Tailor your subliminal messages with advanced AI algorithms for maximum effectiveness."
+                description="Harness AI to create custom affirmations."
                 href="#"
                 cta="Explore AI Features"
               />
               <BentoCard
                 name="Rapid Integration"
                 className=""
-                background={<div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />}
+                background={<div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800" />}
                 Icon={Zap}
-                description="Seamlessly integrate subliminal content into your daily routine with our quick-start templates."
+                description="Seamlessly integrate our affirmations into your daily routine."
                 href="#"
-                cta="See Integration Options"
+                cta="Learn More"
               />
               <BentoCard
-                name="Privacy First"
+                name="Personalized Experience"
                 className=""
-                background={<div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700" />}
+                background={<div className="absolute inset-0 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800" />}
                 Icon={Shield}
-                description="Your data and personal affirmations are encrypted and protected with industry-leading security measures."
+                description="Tailor your affirmations to your specific goals and needs."
                 href="#"
-                cta="Learn About Our Security"
+                cta="Customize Now"
               />
               <BentoCard
-                name="Personalized Analytics"
-                className="md:col-span-2"
-                background={<div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />}
-                Icon={Sparkles}
-                description="Track your progress and optimize your subliminal strategy with detailed, personalized analytics."
+                name="Audio Customization"
+                className=""
+                background={<div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800" />}
+                Icon={Headphones}
+                description="Create unique audio experiences with customizable background tracks and voices."
                 href="#"
-                cta="View Analytics Demo"
+                cta="Explore Audio Options"
               />
             </BentoGrid>
-          </div>
-          <div className="container px-4 md:px-6 mb-32">
-            <h2 className="text-2xl font-bold text-center mb-12 text-gray-800 dark:text-white">How It Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">1</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Create</h3>
-                <p className="text-gray-600 dark:text-gray-400">Design your personalized subliminal messages using our AI-powered system.</p>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">2</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Listen</h3>
-                <p className="text-gray-600 dark:text-gray-400">Integrate your custom audio into your daily routine with ease.</p>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">3</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Transform</h3>
-                <p className="text-gray-600 dark:text-gray-400">Experience positive changes as your subconscious mind absorbs the affirmations.</p>
-              </div>
-            </div>
           </div>
         </main>
         <footer className="py-6 text-center text-gray-500 dark:text-gray-400">
           © 2023 Subliminal.Studio. All rights reserved.
         </footer>
       </div>
+      <style jsx global>{`
+        @keyframes glow {
+          0%, 100% { filter: drop-shadow(0 0 5px rgba(147, 51, 234, 0.7)); }
+          50% { filter: drop-shadow(0 0 20px rgba(147, 51, 234, 0.9)); }
+        }
+        .animate-glow {
+          animation: glow 3s ease-in-out infinite;
+        }
+      `}</style>
     </div>
-  )
-}
+  );
+};
 
-export default HomePage;
+export default LandingPage;
