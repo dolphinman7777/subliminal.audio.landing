@@ -5,71 +5,92 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2, Download, CreditCard, LogOut } from "lucide-react"
+import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2, Download, CreditCard, LogOut, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { loadStripe } from '@stripe/stripe-js'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useClerk } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const inspirationPrompts = [
-  "confident", "creative", "resilient", "compassionate", "determined",
-  "optimistic", "courageous", "grateful", "adaptable", "empathetic",
+  "Radiant charisma",
+  "Limitless abundance",
+  "Magnetic energy",
+  "Compassionate healing",
+  "Unshakable confidence",
+  "Manifesting miracles",
+  "Creative genius",
+  "Inner clarity",
+  "Boundless vitality",
+  "Graceful flow"
 ]
 
+const AnimatedBentoBox = ({ children, className, gradient }) => {
+  return (
+    <motion.div
+      className={`group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl p-8 ${className}`}
+      whileHover={{ 
+        scale: 1.02,
+        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        zIndex: 10
+      }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className={`absolute inset-0 ${gradient} transition-opacity duration-300`} />
+      <div className="relative z-10 flex flex-col h-full">
+        {children}
+      </div>
+      <motion.div
+        className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.03] group-hover:dark:bg-neutral-800/10"
+        initial={{ opacity: 0 }}
+        whileHover={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      />
+    </motion.div>
+  );
+};
+
 function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated: (affirmations: string[], audioUrl: string) => void }) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [prompts, setPrompts] = useState<string[]>([])
+  const [prompt, setPrompt] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isTtsLoading, setIsTtsLoading] = useState(false)
 
-  const addPrompt = () => {
-    if (searchQuery.trim() !== "" && !prompts.includes(searchQuery.trim())) {
-      setPrompts([...prompts, searchQuery.trim()])
-      setSearchQuery("")
+  const handleAddPrompt = (newPrompt: string) => {
+    if (newPrompt.trim() && !tags.includes(newPrompt.trim())) {
+      setTags([...tags, newPrompt.trim()])
+      setPrompt('')
     }
   }
 
-  const removePrompt = (promptToRemove: string) => {
-    setPrompts(prompts.filter(prompt => prompt !== promptToRemove))
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addPrompt()
-    }
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
   const generateAffirmation = async () => {
+    if (tags.length === 0) return;
+
     setIsLoading(true)
     try {
-      let promptToUse = prompts.join(', ')
-      if (searchQuery.trim()) {
-        promptToUse += promptToUse ? `, ${searchQuery.trim()}` : searchQuery.trim()
-      }
-      
-      if (!promptToUse) {
-        throw new Error('No prompt provided')
-      }
-
       const response = await fetch('/api/generate-affirmation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: promptToUse }),
+        body: JSON.stringify({ prompt: tags.join(', ') }),
       });
 
       if (!response.ok) {
@@ -102,7 +123,6 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
 
       const ttsData = await ttsResponse.json();
       onAffirmationGenerated(newAffirmations, ttsData.audioUrl);
-      setSearchQuery("")
     } catch (error) {
       console.error('Error generating affirmations or converting to speech:', error);
       // Handle error (e.g., show error message to user)
@@ -112,77 +132,66 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
   }
 
   return (
-    <Card className="h-full">
-      <CardContent className="p-4 flex flex-col h-full">
-        <h2 className="text-xl font-bold mb-4">Affirmation Search</h2>
-        <div className="flex space-x-2 mb-4">
-          <Input
-            type="text"
-            placeholder="Enter your prompt..."
-            value={searchQuery}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-grow"
-          />
-          <Button onClick={addPrompt} size="sm" asChild={false}>Add</Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="px-2 w-10 relative overflow-hidden">
-                <Sparkles className="h-4 w-4 text-purple-600" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              {inspirationPrompts.map((prompt) => (
-                <DropdownMenuItem
-                  key={prompt}
-                  onSelect={() => {
-                    setSearchQuery(prompt)
-                    addPrompt()
-                  }}
-                >
-                  {prompt}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className="flex-grow overflow-y-auto mb-4">
-          <div className="flex flex-wrap gap-2">
-            <AnimatePresence>
-              {prompts.map((prompt) => (
-                <motion.span 
-                  key={prompt}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm flex items-center"
-                >
-                  {prompt}
-                  <button 
-                    onClick={() => removePrompt(prompt)}
-                    className="ml-2 focus:outline-none text-purple-600 hover:text-purple-800"
-                    aria-label={`Remove ${prompt}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </motion.span>
-              ))}
-            </AnimatePresence>
+    <div className="w-full">
+      <div className="flex items-center space-x-2 mb-4">
+        <Input
+          type="text"
+          placeholder="Enter your prompt..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="flex-grow"
+        />
+        <Button onClick={() => handleAddPrompt(prompt)}>Add</Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="relative overflow-hidden group"
+            >
+              <Sparkles className="h-4 w-4 relative z-10 text-purple-600" />
+              <div className="absolute inset-0 bg-purple-400 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+              <div className="absolute inset-0 bg-purple-300 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300 animate-pulse animation-delay-150"></div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-md p-2">
+            {inspirationPrompts.map((item, index) => (
+              <DropdownMenuItem 
+                key={index} 
+                onSelect={() => handleAddPrompt(item)}
+                className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1"
+              >
+                {item}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="flex flex-wrap gap-1 mb-4">
+        {tags.map((tag, index) => (
+          <div key={index} className="flex items-center bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
+            {tag}
+            <button
+              onClick={() => handleRemoveTag(tag)}
+              className="ml-1 text-purple-600 hover:text-purple-800 focus:outline-none"
+              aria-label={`Remove ${tag} tag`}
+            >
+              <X size={12} />
+            </button>
           </div>
-        </div>
-        <Button 
-          onClick={generateAffirmation} 
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg"
-          disabled={isLoading || (prompts.length === 0 && !searchQuery.trim())}
-        >
-          {isLoading ? 'Generating...' : 'Generate Affirmations'}
-        </Button>
-        {isTtsLoading && (
-          <p className="text-sm text-gray-500 mt-2">Converting to speech...</p>
-        )}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+      <Button 
+        onClick={generateAffirmation} 
+        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg subtle-glow"
+        disabled={isLoading || tags.length === 0}
+      >
+        {isLoading ? 'Generating...' : 'Generate Affirmations'}
+      </Button>
+      {isTtsLoading && (
+        <p className="text-sm text-gray-500 mt-2">Converting to speech...</p>
+      )}
+    </div>
   )
 }
 
@@ -617,7 +626,91 @@ const Studio: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [generatedAffirmations, setGeneratedAffirmations] = useState<string[]>([])
+  const [prompt, setPrompt] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [generatedAffirmations, setGeneratedAffirmations] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const addTag = () => {
+    if (prompt.trim() && !tags.includes(prompt.trim())) {
+      setTags([...tags, prompt.trim()]);
+      setPrompt("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const generateAffirmations = async () => {
+    if (tags.length === 0) return;
+
+    setIsGenerating(true);
+    try {
+      console.log('Sending request to generate affirmations with tags:', tags);
+      const response = await fetch('/api/generate-affirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: tags.join(', ') }),
+      });
+
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate affirmations: ${response.status} ${responseText}`);
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('Parsed response data:', data);
+
+      if (!data.affirmations || !Array.isArray(data.affirmations)) {
+        throw new Error('Invalid response format from the server');
+      }
+
+      setGeneratedAffirmations(data.affirmations);
+
+      // Now, let's send these affirmations to Elevenlabs for TTS conversion
+      setIsTtsLoading(true);
+      const ttsResponse = await fetch('/api/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: data.affirmations.join(' ') }),
+      });
+
+      if (!ttsResponse.ok) {
+        throw new Error(`Failed to convert text to speech: ${ttsResponse.status}`);
+      }
+
+      const ttsData = await ttsResponse.json();
+      setAudioUrl(ttsData.audioUrl);
+      setIsTtsLoading(false);
+
+    } catch (error) {
+      console.error('Error generating affirmations or converting to speech:', error);
+      setGeneratedAffirmations([`Error: ${error.message}`]);
+      setIsTtsLoading(false);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrompt(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [isTtsLoading, setIsTtsLoading] = useState(false)
 
@@ -744,49 +837,75 @@ const Studio: React.FC = () => {
 
   const [isSplit, setIsSplit] = useState(false)
 
-  const handlePayment = async (method: 'PayPal' | 'Card') => {
+  const handleInitialClick = () => {
+    setIsSplit(true)
+  }
+
+  const handlePayment = async (method: string) => {
     console.log(`Processing ${method} payment`);
-    if (method === 'Card') {
-      try {
-        console.log('Fetching /api/create-payment-intent');
-        const response = await fetch('/api/create-payment-intent', {
+    try {
+      if (method === 'Card') {
+        // Existing Stripe logic
+        const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            amount: 300, // €3.00 in cents
+            currency: 'eur',
+          }),
         });
 
-        console.log('Response status:', response.status);
-        const responseData = await response.text();
-        console.log('Response data:', responseData);
-
         if (!response.ok) {
-          throw new Error(`Failed to create Stripe session: ${responseData}`);
+          throw new Error('Failed to create checkout session');
         }
 
-        const { sessionId } = JSON.parse(responseData);
-        console.log('Session ID:', sessionId);
+        const { sessionId } = await response.json();
 
         const stripe = await stripePromise;
-        
         if (!stripe) {
           throw new Error('Stripe failed to load');
         }
 
-        console.log('Redirecting to Stripe checkout');
         const { error } = await stripe.redirectToCheckout({ sessionId });
-        
+
         if (error) {
           console.error('Stripe redirect error:', error);
           throw error;
         }
-      } catch (error) {
-        console.error('Detailed error:', error);
-        alert('Failed to process payment. Please check the console for more details.');
+      } else if (method === 'PayPal') {
+        console.log('Initiating PayPal payment...');
+        const response = await fetch('/api/create-paypal-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: 3.00, // €3.00
+            currency: 'EUR',
+          }),
+        });
+
+        console.log('PayPal API response status:', response.status);
+        const responseData = await response.text();
+        console.log('PayPal API response data:', responseData);
+
+        if (!response.ok) {
+          throw new Error(`Failed to create PayPal order: ${response.status} ${responseData}`);
+        }
+
+        const { approvalUrl } = JSON.parse(responseData);
+        if (!approvalUrl) {
+          throw new Error('No approval URL received from PayPal');
+        }
+
+        console.log('Redirecting to PayPal approval URL:', approvalUrl);
+        window.location.href = approvalUrl;
       }
-    } else if (method === 'PayPal') {
-      // Implement PayPal payment logic here
-      console.log('PayPal payment not implemented yet');
+    } catch (error) {
+      console.error('Detailed payment error:', error);
+      alert('Failed to process payment. Please check the console for more details.');
     }
     setIsSplit(false);
   };
@@ -809,35 +928,112 @@ const Studio: React.FC = () => {
     router.push('/');
   };
 
+  const [isChatbotLoaded, setIsChatbotLoaded] = useState(false);
+
+  const loadChatbot = () => {
+    if (!isChatbotLoaded) {
+      const script = document.createElement('script');
+      script.id = 'chatbotkit-widget';
+      script.src = 'https://static.chatbotkit.com/integrations/widget/v2.js';
+      script.setAttribute('data-widget', 'cm229l9ly4rui13c5gpvurplt');
+      document.head.appendChild(script);
+      setIsChatbotLoaded(true);
+    }
+  };
+
   return (
-    <div className="container mx-auto p-4 h-screen relative">
-      <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
-        <div className="col-span-2 row-span-2">
-          <AffirmationSearch onAffirmationGenerated={handleAffirmationGenerated} />
-        </div>
-        <div className="col-span-1 row-span-2">
-          <Card className="h-full">
-            <CardContent className="p-4 h-full flex flex-col">
+    <div className="container mx-auto p-2 min-h-screen relative font-sans bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
+      <style jsx global>{`
+        @keyframes subtle-glow {
+          0%, 100% { 
+            filter: drop-shadow(0 0 2px rgba(147, 51, 234, 0.2));
+          }
+          50% { 
+            filter: drop-shadow(0 0 3px rgba(147, 51, 234, 0.3));
+          }
+        }
+        .subtle-glow {
+          animation: subtle-glow 3s ease-in-out infinite;
+        }
+        .bento-container:hover .animated-bento:not(:hover) {
+          opacity: 0.5;
+          filter: brightness(0.5);
+          transition: opacity 0.3s ease, filter 0.3s ease;
+        }
+        .animated-bento {
+          transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+        }
+      `}</style>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 flex-grow bento-container">
+        <AnimatedBentoBox 
+          className="col-span-2 row-span-2 animated-bento"
+          gradient="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+        >
+          <Card className="h-full bg-transparent border-none shadow-none">
+            <CardContent className="p-2 sm:p-4 flex flex-col h-full">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-200 subtle-glow">Affirmation Search</h2>
+              <AffirmationSearch onAffirmationGenerated={handleAffirmationGenerated} />
+            </CardContent>
+          </Card>
+        </AnimatedBentoBox>
+
+        <AnimatedBentoBox 
+          className="col-span-1 row-span-2 animated-bento"
+          gradient="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-500"
+        >
+          <Card className="h-full bg-transparent border-none shadow-none">
+            <CardContent className="p-2 sm:p-4 h-full flex flex-col">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100">Audiofirmations</h2>
               <SubliminalAudioPlayer audioUrl={audioUrl} isLoading={isTtsLoading} />
             </CardContent>
           </Card>
-        </div>
-        <div className="col-span-1 row-span-2">
-          <Card className="h-full">
-            <CardContent className="p-4 h-full flex flex-col">
+        </AnimatedBentoBox>
+
+        <AnimatedBentoBox 
+          className="col-span-1 row-span-2 animated-bento"
+          gradient="bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-500 dark:to-gray-400"
+        >
+          <Card className="h-full bg-transparent border-none shadow-none">
+            <CardContent className="p-2 sm:p-4 h-full flex flex-col">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100">Audio Layer</h2>
               <AudioLayerPlayer />
             </CardContent>
           </Card>
-        </div>
-        <div className="col-span-2 row-span-4">
-          <AffirmationList affirmations={generatedAffirmations} />
-        </div>
-        <div className="col-span-2 row-span-4">
-          <Card className="h-full overflow-hidden">
-            <CardContent className="p-4 flex flex-col h-full">
-              <h2 className="text-lg font-semibold mb-2">Audio Controls</h2>
+        </AnimatedBentoBox>
+
+        <AnimatedBentoBox 
+          className="col-span-2 row-span-2 animated-bento"
+          gradient="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600"
+        >
+          <Card className="h-full bg-transparent border-none shadow-none">
+            <CardContent className="p-2 sm:p-4 h-full flex flex-col">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100 subtle-glow">Generated Affirmations</h2>
+              <ScrollArea className="flex-grow pr-2 sm:pr-4">
+                {generatedAffirmations.length > 0 ? (
+                  <ul className="space-y-2">
+                    {generatedAffirmations.map((affirmation, index) => (
+                      <li key={index} className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg shadow-sm text-sm sm:text-base text-gray-800 dark:text-gray-200">
+                        {affirmation}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">No affirmations generated yet.</p>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </AnimatedBentoBox>
+
+        <AnimatedBentoBox 
+          className="col-span-2 row-span-2 animated-bento"
+          gradient="bg-gradient-to-br from-gray-500 to-gray-600 dark:from-gray-400 dark:to-gray-300"
+        >
+          <Card className="h-full overflow-hidden bg-transparent border-none shadow-none">
+            <CardContent className="p-2 sm:p-4 flex flex-col h-full">
+              <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-100 dark:text-gray-800">Audio Controls</h2>
               
-              <div className="space-y-2 flex-grow overflow-y-auto">
+              <div className="space-y-1 flex-grow overflow-y-auto text-xs sm:text-sm text-gray-100 dark:text-gray-800">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <SlidersHorizontal className="w-4 h-4" />
@@ -885,7 +1081,6 @@ const Studio: React.FC = () => {
                   <p className="text-xs text-secondary-foreground/80">current / total</p>
                 </div>
 
-                {/* Moved button to this position */}
                 <div className="bg-muted p-3 rounded-lg mt-2">
                   <div className="flex items-center justify-between space-x-2 mb-2">
                     <Button
@@ -935,12 +1130,11 @@ const Studio: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Payment button */}
                 <div className="relative w-full h-12 mt-2">
                   {!isSplit ? (
                     <Button 
                       className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
-                      onClick={() => setIsSplit(true)}
+                      onClick={handleInitialClick}
                     >
                       <Download className="mr-2 h-5 w-5" />
                       Download (€3.00)
@@ -967,34 +1161,55 @@ const Studio: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </AnimatedBentoBox>
       </div>
-      <audio ref={audioRef} />
-      
-      {/* Logout button */}
-      <button
-        onClick={handleLogout}
-        className="fixed bottom-8 left-8 z-50 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center"
-        aria-label="Logout"
-      >
-        <LogOut className="mr-2 h-5 w-5" />
-        Logout
-      </button>
-      
-      {/* Navigation button */}
-      <button
-        onClick={handleNavigateToLanding}
-        className="fixed bottom-8 right-8 z-50 transition-transform hover:scale-110"
-        aria-label="Go to Landing Page"
-      >
-        <Image
-          src="/head.svg"
-          alt="Go to Landing Page"
-          width={80}
-          height={80}
-          className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
-        />
-      </button>
+
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-2 space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="flex items-center space-x-4">
+          <button
+            className="transition-transform hover:scale-110"
+            aria-label="Subliminal.Studio Logo"
+          >
+            <Image
+              src="/head.svg"
+              alt="Subliminal.Studio Logo"
+              width={80}
+              height={80}
+              className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
+            />
+          </button>
+          <Button
+            onClick={handleLogout}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
+            size="sm"
+          >
+            <LogOut className="mr-1 h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+        
+        <Button
+          onClick={loadChatbot}
+          className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
+          size="sm"
+        >
+          Open Chatbot
+        </Button>
+
+        <button
+          onClick={handleNavigateToLanding}
+          className="transition-transform hover:scale-110"
+          aria-label="Go to Landing Page"
+        >
+          <Image
+            src="/head.svg"
+            alt="Go to Landing Page"
+            width={80}
+            height={80}
+            className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
+          />
+        </button>
+      </div>
     </div>
   )
 }
