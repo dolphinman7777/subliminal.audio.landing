@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2, Download, CreditCard } from "lucide-react"
+import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, Clock, SlidersHorizontal, RepeatIcon, Volume2, X, Sparkles, ChevronDown, Loader2, Download, CreditCard, LogOut } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -16,9 +16,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { loadStripe } from '@stripe/stripe-js';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { useClerk } from "@clerk/nextjs";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -119,11 +120,11 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
             type="text"
             placeholder="Enter your prompt..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="flex-grow"
           />
-          <Button onClick={addPrompt} size="sm">Add</Button>
+          <Button onClick={addPrompt} size="sm" asChild={false}>Add</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="px-2 w-10 relative overflow-hidden">
@@ -605,8 +606,9 @@ interface LayoutSketchProps {
   initialLayout?: any; // Make this optional and replace 'any' with the correct type
 }
 
-const LayoutSketch: React.FC = () => {
+const Studio: React.FC = () => {
   const router = useRouter();
+  const { signOut } = useClerk();
   const [trackDuration, setTrackDuration] = useState(60)
   const [ttsDuration, setTtsDuration] = useState(10)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -793,6 +795,20 @@ const LayoutSketch: React.FC = () => {
     router.push('/');
   };
 
+  useEffect(() => {
+    // Check if the user is authenticated
+    const isAuthenticated = checkAuthStatus(); // Implement this function
+    if (!isAuthenticated) {
+      // Redirect back to home if not authenticated
+      router.push('/');
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/');
+  };
+
   return (
     <div className="container mx-auto p-4 h-screen relative">
       <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
@@ -955,6 +971,16 @@ const LayoutSketch: React.FC = () => {
       </div>
       <audio ref={audioRef} />
       
+      {/* Logout button */}
+      <button
+        onClick={handleLogout}
+        className="fixed bottom-8 left-8 z-50 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center"
+        aria-label="Logout"
+      >
+        <LogOut className="mr-2 h-5 w-5" />
+        Logout
+      </button>
+      
       {/* Navigation button */}
       <button
         onClick={handleNavigateToLanding}
@@ -973,4 +999,10 @@ const LayoutSketch: React.FC = () => {
   )
 }
 
-export default LayoutSketch;
+// Helper function to check authentication status (implement your actual logic here)
+function checkAuthStatus() {
+  // Placeholder: Replace with your actual auth check logic
+  return true; // Assuming the user is authenticated for this example
+}
+
+export default Studio

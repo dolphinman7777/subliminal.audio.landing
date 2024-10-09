@@ -4,5 +4,3 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
-
-// Move ESLint configuration to a separate .eslintrc.js file

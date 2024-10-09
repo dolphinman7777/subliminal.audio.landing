@@ -22,7 +22,7 @@ const inspirationPrompts = [
   "Graceful flow"
 ]
 
-export default function Component() {
+export default function AffirmationSearchShowcase({ onAffirmationGenerated }: { onAffirmationGenerated: (affirmation: string) => void }) {
   const [prompt, setPrompt] = useState('')
   const [tags, setTags] = useState<string[]>(["Success", "Maths", "Divinity"])
 

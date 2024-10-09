@@ -65,19 +65,11 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
-        "wave-emit": {
-          "0%": { transform: "scale(0.95)", opacity: 0.8 },
-          "100%": { transform: "scale(1.2)", opacity: 0 },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "wave-emit": "wave-emit 1s ease-out infinite",
       },
-      width: {
-        '112': '28rem',
-      }
     },
   },
   plugins: [require("tailwindcss-animate")],

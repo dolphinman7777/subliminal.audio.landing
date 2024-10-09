@@ -1,4 +1,6 @@
-import { authMiddleware } from "@clerk/nextjs";
+import { authMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export default authMiddleware({
   publicRoutes: ["/", "/api/(.*)"],
@@ -6,5 +8,7 @@ export default authMiddleware({
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
 };
+
+// Remove the middleware function as it's not needed when using Clerk's authMiddleware
