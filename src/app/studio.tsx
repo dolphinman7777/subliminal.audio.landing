@@ -736,7 +736,7 @@ interface LayoutSketchProps {
 
 const Studio: React.FC = () => {
   const router = useRouter();
-  const { signOut } = useClerk();
+  const { signOut, openUserProfile } = useClerk();
   const [trackDuration, setTrackDuration] = useState(60)
   const [ttsDuration, setTtsDuration] = useState(10)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -1047,6 +1047,10 @@ const Studio: React.FC = () => {
     router.push('/');
   };
 
+  const handleOpenSettings = () => {
+    openUserProfile();
+  };
+
   const [isChatbotLoaded, setIsChatbotLoaded] = useState(false);
 
   const loadChatbot = () => {
@@ -1077,10 +1081,10 @@ const Studio: React.FC = () => {
         .bento-container:hover .animated-bento:not(:hover) {
           opacity: 0.5;
           filter: brightness(0.5);
-          transition: opacity 0.3s ease, filter 0.3s ease;
+          transition: opacity 0.1s ease, filter 0.1s ease; /* Reduced from 0.3s to 0.1s */
         }
         .animated-bento {
-          transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+          transition: opacity 0.1s ease, filter 0.1s ease, transform 0.1s ease; /* Reduced from 0.3s to 0.1s */
         }
         .glow-effect {
           text-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
@@ -1248,44 +1252,22 @@ const Studio: React.FC = () => {
                   </div>
                   {/* The "Loop TTS" switch and label have been removed */}
                 </div>
-
-                {/* Download button */}
-                <div className="bg-white p-4 rounded-xl shadow-md">
-                  {!isSplit ? (
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
-                      onClick={handleInitialClick}
-                    >
-                      <Download className="mr-2 h-5 w-5" />
-                      Download (€3.00)
-                    </Button>
-                  ) : (
-                    <div className="flex justify-between w-full space-x-2">
-                      <Button 
-                        className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white font-bold transition-all duration-300 ease-in-out"
-                        onClick={() => handlePayment('PayPal')}
-                      >
-                        <CreditCard className="mr-2 h-5 w-5" />
-                        PayPal
-                      </Button>
-                      <Button 
-                        className="w-1/2 bg-purple-500 hover:bg-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
-                        onClick={() => handlePayment('Card')}
-                      >
-                        <CreditCard className="mr-2 h-5 w-5" />
-                        Card
-                      </Button>
-                    </div>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
         </AnimatedBentoBox>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center mt-2 space-y-2 sm:space-y-0 sm:space-x-2">
-        <div className="flex items-center space-x-4">
+      <div className="flex justify-between items-center mt-2">
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleOpenSettings}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
+            size="sm"
+          >
+            <Settings className="mr-1 h-4 w-4" />
+            Settings
+          </Button>
           <Button
             onClick={handleLogout}
             className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
@@ -1295,16 +1277,36 @@ const Studio: React.FC = () => {
             Logout
           </Button>
         </div>
-        
-        <Button
-          onClick={loadChatbot}
-          className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
-          size="sm"
-        >
-          Open Chatbot
-        </Button>
 
-        {/* The logo in the bottom right has been removed */}
+        {/* Download button moved to bottom right */}
+        <div className="bg-white p-2 rounded-xl shadow-md">
+          {!isSplit ? (
+            <Button 
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+              onClick={handleInitialClick}
+            >
+              <Download className="mr-2 h-5 w-5" />
+              Download (€3.00)
+            </Button>
+          ) : (
+            <div className="flex justify-between w-full space-x-2">
+              <Button 
+                className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white font-bold transition-all duration-300 ease-in-out"
+                onClick={() => handlePayment('PayPal')}
+              >
+                <CreditCard className="mr-2 h-5 w-5" />
+                PayPal
+              </Button>
+              <Button 
+                className="w-1/2 bg-purple-500 hover:bg-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+                onClick={() => handlePayment('Card')}
+              >
+                <CreditCard className="mr-2 h-5 w-5" />
+                Card
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
