@@ -43,11 +43,11 @@ const AnimatedBentoBox = ({ children, className, gradient }) => {
     <motion.div
       className={`group relative col-span-1 flex flex-col justify-between overflow-hidden rounded-2xl p-8 ${className}`}
       whileHover={{ 
-        scale: 1.02,
-        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        scale: 1.01, // Reduced from 1.02 to 1.01 for a subtler effect
+        boxShadow: "0 10px 15px -5px rgba(0, 0, 0, 0.1), 0 5px 5px -5px rgba(0, 0, 0, 0.04)",
         zIndex: 10
       }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }} // Slightly faster transition
     >
       <div className={`absolute inset-0 ${gradient} transition-opacity duration-300`} />
       <div className="relative z-10 flex flex-col h-full">
@@ -57,7 +57,7 @@ const AnimatedBentoBox = ({ children, className, gradient }) => {
         className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.03] group-hover:dark:bg-neutral-800/10"
         initial={{ opacity: 0 }}
         whileHover={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.2 }} // Slightly faster transition
       />
     </motion.div>
   );
@@ -750,19 +750,41 @@ const Studio: React.FC = () => {
   const [generatedAffirmations, setGeneratedAffirmations] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const addTag = () => {
-    if (prompt.trim() && !tags.includes(prompt.trim())) {
-      setTags([...tags, prompt.trim()]);
-      setPrompt("");
-    }
-  };
+  const [generationCount, setGenerationCount] = useState(0);
+  const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
+  const [isPaidCustomer, setIsPaidCustomer] = useState(false);
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+  useEffect(() => {
+    // Load generation count and last generation time from localStorage
+    const storedCount = localStorage.getItem('generationCount');
+    const storedTime = localStorage.getItem('lastGenerationTime');
+    const storedPaidStatus = localStorage.getItem('isPaidCustomer');
+
+    if (storedCount) setGenerationCount(parseInt(storedCount, 10));
+    if (storedTime) setLastGenerationTime(parseInt(storedTime, 10));
+    if (storedPaidStatus) setIsPaidCustomer(storedPaidStatus === 'true');
+  }, []);
+
+  const checkAndResetDailyLimit = () => {
+    const now = Date.now();
+    if (lastGenerationTime && now - lastGenerationTime > 24 * 60 * 60 * 1000) {
+      // Reset count if it's been more than 24 hours
+      setGenerationCount(0);
+      localStorage.setItem('generationCount', '0');
+    }
+    setLastGenerationTime(now);
+    localStorage.setItem('lastGenerationTime', now.toString());
   };
 
   const generateAffirmations = async () => {
-    if (tags.length === 0) return;
+    if (!isPaidCustomer && generationCount >= 10) {
+      const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - (lastGenerationTime || 0));
+      const hoursLeft = Math.ceil(timeLeft / (60 * 60 * 1000));
+      alert(`Daily limit reached. Please try again in ${hoursLeft} hours or upgrade to continue.`);
+      return;
+    }
+
+    checkAndResetDailyLimit();
 
     setIsGenerating(true);
     try {
@@ -809,6 +831,12 @@ const Studio: React.FC = () => {
       const ttsData = await ttsResponse.json();
       setAudioUrl(ttsData.audioUrl);
       setIsTtsLoading(false);
+
+      if (!isPaidCustomer) {
+        const newCount = generationCount + 1;
+        setGenerationCount(newCount);
+        localStorage.setItem('generationCount', newCount.toString());
+      }
 
     } catch (error) {
       console.error('Error generating affirmations or converting to speech:', error);
@@ -1027,6 +1055,10 @@ const Studio: React.FC = () => {
       alert('Failed to process payment. Please check the console for more details.');
     }
     setIsSplit(false);
+    setIsPaidCustomer(true);
+    localStorage.setItem('isPaidCustomer', 'true');
+    setGenerationCount(0);
+    localStorage.setItem('generationCount', '0');
   };
 
   const handleNavigateToLanding = () => {
@@ -1079,12 +1111,16 @@ const Studio: React.FC = () => {
           animation: subtle-glow 3s ease-in-out infinite;
         }
         .bento-container:hover .animated-bento:not(:hover) {
-          opacity: 0.5;
-          filter: brightness(0.5);
-          transition: opacity 0.1s ease, filter 0.1s ease; /* Reduced from 0.3s to 0.1s */
+          opacity: 0.7;
+          filter: brightness(0.7);
+          transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
         }
         .animated-bento {
-          transition: opacity 0.1s ease, filter 0.1s ease, transform 0.1s ease; /* Reduced from 0.3s to 0.1s */
+          transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+        }
+        .animated-bento:hover {
+          transform: translateY(-2px) scale(1.005);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         .glow-effect {
           text-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
@@ -1262,16 +1298,22 @@ const Studio: React.FC = () => {
         <div className="flex items-center space-x-2">
           <Button
             onClick={handleOpenSettings}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
+            className="bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 text-gray-800 dark:text-white font-bold rounded-full transition-all duration-300 ease-in-out flex items-center justify-center text-sm hover:from-gray-300 hover:to-gray-400 dark:hover:from-gray-600 dark:hover:to-gray-500 hover:shadow-blue-300/50 dark:hover:shadow-blue-500/30"
             size="sm"
+            style={{
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 255, 0.1), 0 2px 4px -1px rgba(0, 0, 255, 0.06)',
+            }}
           >
             <Settings className="mr-1 h-4 w-4" />
             Settings
           </Button>
           <Button
             onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
+            className="bg-gradient-to-r from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-500 text-gray-800 dark:text-white font-bold rounded-full transition-all duration-300 ease-in-out flex items-center justify-center text-sm hover:from-gray-400 hover:to-gray-500 dark:hover:from-gray-500 dark:hover:to-gray-400 hover:shadow-blue-300/50 dark:hover:shadow-blue-500/30"
             size="sm"
+            style={{
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 255, 0.1), 0 2px 4px -1px rgba(0, 0, 255, 0.06)',
+            }}
           >
             <LogOut className="mr-1 h-4 w-4" />
             Logout
@@ -1308,6 +1350,12 @@ const Studio: React.FC = () => {
           )}
         </div>
       </div>
+
+      {!isPaidCustomer && (
+        <div className="text-sm text-gray-600 mt-2">
+          Generations remaining today: {10 - generationCount}
+        </div>
+      )}
     </div>
   )
 }
