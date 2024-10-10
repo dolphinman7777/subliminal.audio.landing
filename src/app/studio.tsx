@@ -69,6 +69,43 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
   const [isLoading, setIsLoading] = useState(false)
   const [isTtsLoading, setIsTtsLoading] = useState(false)
 
+  const inspirationalWords = [
+    "Confidence", "Strength", "Success", "Love", "Potential", "Growth", "Peace",
+    "Creativity", "Gratitude", "Resilience", "Joy", "Abundance", "Wisdom",
+    "Courage", "Balance", "Harmony", "Focus", "Passion", "Determination", "Kindness"
+  ];
+
+  const skillsets = [
+    "Leadership", "Communication", "Problem-solving", "Adaptability", "Teamwork",
+    "Time management", "Critical thinking", "Emotional intelligence", "Networking",
+    "Negotiation", "Public speaking", "Decision-making", "Creativity", "Innovation",
+    "Analytical skills", "Strategic planning", "Conflict resolution", "Empathy",
+    "Active listening", "Project management"
+  ];
+
+  const goals = [
+    "Lose weight", "Run a marathon", "Learn a new language", "Start a business",
+    "Write a book", "Travel to 10 countries", "Get a promotion", "Save for retirement",
+    "Volunteer regularly", "Improve relationships", "Quit smoking", "Learn to code",
+    "Reduce stress", "Eat healthier", "Meditate daily", "Read 50 books a year",
+    "Pay off debt", "Learn to play an instrument", "Get organized", "Improve public speaking"
+  ];
+
+  const carouselRef1 = useRef<HTMLDivElement>(null);
+  const carouselRef2 = useRef<HTMLDivElement>(null);
+  const carouselRef3 = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    [carouselRef1, carouselRef2, carouselRef3].forEach((ref, index) => {
+      const carousel = ref.current;
+      if (carousel) {
+        const scrollWidth = carousel.scrollWidth;
+        const animationDuration = scrollWidth / (40 + index * 10); // Slightly different speeds
+        carousel.style.animationDuration = `${animationDuration}s`;
+      }
+    });
+  }, []);
+
   const handleAddPrompt = (newPrompt: string) => {
     if (newPrompt.trim() && !tags.includes(newPrompt.trim())) {
       setTags([...tags, newPrompt.trim()])
@@ -167,27 +204,105 @@ function AffirmationSearch({ onAffirmationGenerated }: { onAffirmationGenerated:
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="flex flex-wrap gap-1 mb-4">
-        {tags.map((tag, index) => (
-          <div key={index} className="flex items-center bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
-            {tag}
-            <button
-              onClick={() => handleRemoveTag(tag)}
-              className="ml-1 text-purple-600 hover:text-purple-800 focus:outline-none"
-              aria-label={`Remove ${tag} tag`}
-            >
-              <X size={12} />
-            </button>
-          </div>
-        ))}
+      
+      {/* New white bento box for tags and generate button */}
+      <div className="bg-white p-4 rounded-xl shadow-md mb-4">
+        <div className="flex flex-wrap gap-1 mb-4">
+          {tags.map((tag, index) => (
+            <div key={index} className="flex items-center bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
+              {tag}
+              <button
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-1 text-purple-600 hover:text-purple-800 focus:outline-none"
+                aria-label={`Remove ${tag} tag`}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <Button 
+          onClick={generateAffirmation} 
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg subtle-glow"
+          disabled={isLoading || tags.length === 0}
+        >
+          {isLoading ? 'Generating...' : 'Generate Affirmations'}
+        </Button>
       </div>
-      <Button 
-        onClick={generateAffirmation} 
-        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg subtle-glow"
-        disabled={isLoading || tags.length === 0}
-      >
-        {isLoading ? 'Generating...' : 'Generate Affirmations'}
-      </Button>
+      
+      {/* Inspirational Words Carousel */}
+      <div className="mt-4 overflow-hidden">
+        <div className="relative">
+          <div
+            ref={carouselRef1}
+            className="flex animate-scroll whitespace-nowrap"
+            style={{
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+            }}
+          >
+            {inspirationalWords.concat(inspirationalWords).map((word, index) => (
+              <button
+                key={index}
+                onClick={() => handleAddPrompt(word)}
+                className="inline-block px-3 py-1 mr-2 text-sm bg-purple-100 text-purple-800 rounded-full hover:bg-purple-200 transition-colors duration-300"
+              >
+                {word}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Skillsets Carousel */}
+      <div className="mt-4 overflow-hidden">
+        <div className="relative">
+          <div
+            ref={carouselRef2}
+            className="flex animate-scroll whitespace-nowrap"
+            style={{
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+              animationDirection: 'reverse', // Scrolling in opposite direction
+            }}
+          >
+            {skillsets.concat(skillsets).map((skill, index) => (
+              <button
+                key={index}
+                onClick={() => handleAddPrompt(skill)}
+                className="inline-block px-3 py-1 mr-2 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 transition-colors duration-300"
+              >
+                {skill}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Goals Carousel */}
+      <div className="mt-4 overflow-hidden">
+        <div className="relative">
+          <div
+            ref={carouselRef3}
+            className="flex animate-scroll whitespace-nowrap"
+            style={{
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+            }}
+          >
+            {goals.concat(goals).map((goal, index) => (
+              <button
+                key={index}
+                onClick={() => handleAddPrompt(goal)}
+                className="inline-block px-3 py-1 mr-2 text-sm bg-green-100 text-green-800 rounded-full hover:bg-green-200 transition-colors duration-300"
+              >
+                {goal}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      
       {isTtsLoading && (
         <p className="text-sm text-gray-500 mt-2">Converting to speech...</p>
       )}
@@ -290,67 +405,71 @@ function SubliminalAudioPlayer({ audioUrl, isLoading }: { audioUrl: string | nul
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-3">
-        <div className="text-base font-semibold relative overflow-hidden">
-          <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
-            Audio
-          </span>
-          <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
-            firmations
-          </span>
+      <h2 className="text-xl font-semibold mb-4">
+        <span className="text-green-500 glow-effect">Audio</span>firmations
+      </h2>
+      
+      <div className="bg-white p-4 rounded-xl shadow-md mb-4 flex flex-col justify-between h-[200px]">
+        <div className="flex justify-between items-center">
+          <Select value={speedFactor.toString()} onValueChange={handleSpeedChange}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Normal" />
+            </SelectTrigger>
+            <SelectContent>
+              {speedOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value.toString()}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={speedFactor.toString()} onValueChange={handleSpeedChange}>
-          <SelectTrigger className="w-[100px]">
-            <SelectValue placeholder="Speed" />
-          </SelectTrigger>
-          <SelectContent>
-            {speedOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value.toString()}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <div className="flex justify-between text-sm">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+        
+        <div className="flex justify-center space-x-3">
+          <Button variant="outline" size="icon" onClick={skipToStart} className="w-10 h-10" disabled={isLoading}>
+            <SkipBackIcon className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant={isPlaying ? "default" : "outline"} 
+            size="icon"
+            onClick={togglePlayPause}
+            className={`w-10 h-10 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isPlaying ? (
+              <PauseIcon className="h-5 w-5" />
+            ) : (
+              <PlayIcon className="h-5 w-5" />
+            )}
+          </Button>
+          <Button variant="outline" size="icon" onClick={skipToEnd} className="w-10 h-10" disabled={isLoading}>
+            <SkipForwardIcon className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Volume2 className="h-5 w-5 text-green-500" />
+          <Slider
+            value={[volume]}
+            max={1}
+            step={0.01}
+            onValueChange={handleVolumeChange}
+            className="w-full"
+            thumbClassName="bg-green-500 border-2 border-white"
+            trackClassName="bg-green-200"
+            rangeClassName="bg-green-500"
+          />
+        </div>
       </div>
+      
       <audio ref={audioRef} className="hidden" />
-      <canvas ref={canvasRef} width="300" height="80" className="w-full mb-3" />
-      <div className="flex justify-between text-sm mb-2">
-        <span>{formatTime(currentTime)}</span>
-        <span>{formatTime(duration)}</span>
-      </div>
-      <div className="flex justify-center space-x-3 mb-3">
-        <Button variant="outline" size="icon" onClick={skipToStart} className="w-10 h-10" disabled={isLoading}>
-          <SkipBackIcon className="h-5 w-5" />
-        </Button>
-        <Button 
-          variant={isPlaying ? "default" : "outline"} 
-          size="icon"
-          onClick={togglePlayPause}
-          className={`w-10 h-10 ${isPlaying ? "bg-green-500 hover:bg-green-600" : ""}`}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : isPlaying ? (
-            <PauseIcon className="h-5 w-5" />
-          ) : (
-            <PlayIcon className="h-5 w-5" />
-          )}
-        </Button>
-        <Button variant="outline" size="icon" onClick={skipToEnd} className="w-10 h-10" disabled={isLoading}>
-          <SkipForwardIcon className="h-5 w-5" />
-        </Button>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Volume2 className="h-5 w-5" />
-        <Slider
-          value={[volume]}
-          max={1}
-          step={0.01}
-          onValueChange={handleVolumeChange}
-          className="w-full"
-        />
-      </div>
     </div>
   )
 }
@@ -523,16 +642,27 @@ function AudioLayerPlayer() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-3">
-        <div className="text-base font-semibold relative overflow-hidden">
-          <span className={`transition-colors duration-500 ${isAnimating ? 'text-green-500' : ''}`}>
-            Audio
-          </span>
-          <span className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
-            Layer
-          </span>
+      <h2 className="text-xl font-semibold mb-4">Audio Layer</h2>
+      
+      <div className="bg-white p-4 rounded-xl shadow-md mb-4 flex flex-col justify-between h-[200px]">
+        <Select value={audioLayer} onValueChange={handleAudioLayerChange}>
+          <SelectTrigger className="w-full text-xs py-1">
+            <SelectValue placeholder="Select Layer" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="layer1">Rock Audio Layer</SelectItem>
+            <SelectItem value="layer2">Jazz Audio Layer</SelectItem>
+            <SelectItem value="layer3">Blues Audio Layer</SelectItem>
+            <SelectItem value="layer4">Pop Audio Layer</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <div className="flex justify-between text-sm">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
-        <div className="flex items-center space-x-2">
+        
+        <div className="flex justify-center space-x-3">
           <Button variant="outline" size="icon" onClick={skipToStart} className="w-8 h-8">
             <SkipBackIcon className="h-4 w-4" />
           </Button>
@@ -548,48 +678,37 @@ function AudioLayerPlayer() {
             <SkipForwardIcon className="h-4 w-4" />
           </Button>
         </div>
+        
+        <div className="flex items-center space-x-2">
+          <Volume2 className="h-5 w-5 text-green-500" />
+          <Slider
+            value={[volume]}
+            max={1}
+            step={0.01}
+            onValueChange={handleVolumeChange}
+            className="w-full"
+            thumbClassName="bg-green-500 border-2 border-white"
+            trackClassName="bg-green-200"
+            rangeClassName="bg-green-500"
+          />
+        </div>
       </div>
-      <Select value={audioLayer} onValueChange={handleAudioLayerChange}>
-        <SelectTrigger className="w-full text-xs py-1">
-          <SelectValue placeholder="Select Layer" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="layer1">Rock Audio Layer</SelectItem>
-          <SelectItem value="layer2">Jazz Audio Layer</SelectItem>
-          <SelectItem value="layer3">Blues Audio Layer</SelectItem>
-          <SelectItem value="layer4">Pop Audio Layer</SelectItem>
-        </SelectContent>
-      </Select>
+      
       <audio ref={audioRef} className="hidden" />
-      <canvas ref={canvasRef} width="300" height="80" className="w-full mb-3" />
-      <div className="flex justify-between text-sm mb-2">
-        <span>{formatTime(currentTime)}</span>
-        <span>{formatTime(duration)}</span>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Volume2 className="h-5 w-5" />
-        <Slider
-          value={[volume]}
-          max={1}
-          step={0.01}
-          onValueChange={handleVolumeChange}
-          className="w-full"
-        />
-      </div>
     </div>
   )
 }
 
 function AffirmationList({ affirmations }: { affirmations: string[] }) {
   return (
-    <Card className="w-full h-full">
-      <CardContent className="p-4 h-full flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Generated Affirmations</h2>
-        <ScrollArea className="flex-grow pr-4">
+    <div className="flex flex-col h-full">
+      <h2 className="text-2xl font-bold mb-4">Generated Affirmations</h2>
+      <div className="bg-white p-4 rounded-xl shadow-md flex-grow overflow-hidden">
+        <ScrollArea className="h-full pr-4">
           {affirmations.length > 0 ? (
             affirmations.map((affirmation, index) => (
               <div key={index} className="mb-4 last:mb-0">
-                <p className="text-lg text-gray-700 p-4 bg-white border border-gray-200 rounded-lg affirmation-hover hover:bg-purple-100 hover:text-purple-800 transition-colors duration-300">
+                <p className="text-lg text-gray-700 p-4 bg-gray-50 border border-gray-200 rounded-lg affirmation-hover hover:bg-purple-100 hover:text-purple-800 transition-colors duration-300">
                   {affirmation}
                 </p>
               </div>
@@ -598,8 +717,8 @@ function AffirmationList({ affirmations }: { affirmations: string[] }) {
             <p className="text-gray-500 italic">No affirmations generated yet.</p>
           )}
         </ScrollArea>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -963,6 +1082,17 @@ const Studio: React.FC = () => {
         .animated-bento {
           transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
         }
+        .glow-effect {
+          text-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+
+        .animate-scroll {
+          animation: scroll linear infinite;
+        }
       `}</style>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 flex-grow bento-container">
         <AnimatedBentoBox 
@@ -983,7 +1113,7 @@ const Studio: React.FC = () => {
         >
           <Card className="h-full bg-transparent border-none shadow-none">
             <CardContent className="p-2 sm:p-4 h-full flex flex-col">
-              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100">Audiofirmations</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100"></h2>
               <SubliminalAudioPlayer audioUrl={audioUrl} isLoading={isTtsLoading} />
             </CardContent>
           </Card>
@@ -1005,24 +1135,7 @@ const Studio: React.FC = () => {
           className="col-span-2 row-span-2 animated-bento"
           gradient="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600"
         >
-          <Card className="h-full bg-transparent border-none shadow-none">
-            <CardContent className="p-2 sm:p-4 h-full flex flex-col">
-              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 text-gray-800 dark:text-gray-100 subtle-glow">Generated Affirmations</h2>
-              <ScrollArea className="flex-grow pr-2 sm:pr-4">
-                {generatedAffirmations.length > 0 ? (
-                  <ul className="space-y-2">
-                    {generatedAffirmations.map((affirmation, index) => (
-                      <li key={index} className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg shadow-sm text-sm sm:text-base text-gray-800 dark:text-gray-200">
-                        {affirmation}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">No affirmations generated yet.</p>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <AffirmationList affirmations={generatedAffirmations} />
         </AnimatedBentoBox>
 
         <AnimatedBentoBox 
@@ -1031,57 +1144,73 @@ const Studio: React.FC = () => {
         >
           <Card className="h-full overflow-hidden bg-transparent border-none shadow-none">
             <CardContent className="p-2 sm:p-4 flex flex-col h-full">
-              <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-100 dark:text-gray-800">Audio Controls</h2>
+              <h2 className="text-lg sm:text-xl font-bold mb-2 text-white">Audio Controls</h2>
               
-              <div className="space-y-1 flex-grow overflow-y-auto text-xs sm:text-sm text-gray-100 dark:text-gray-800">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <SlidersHorizontal className="w-4 h-4" />
-                    <h3 className="text-sm font-semibold">Track Length</h3>
+              <div className="space-y-4 flex-grow overflow-y-auto text-xs sm:text-sm">
+                {/* Track Length and TTS Loop Duration controls */}
+                <div className="bg-white p-4 rounded-xl shadow-md">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <SlidersHorizontal className="w-4 h-4 text-blue-500" />
+                        <h3 className="text-sm font-semibold text-black">Track Length</h3>
+                      </div>
+                      <Slider
+                        id="track-length-slider"
+                        min={10}
+                        max={300}
+                        step={1}
+                        value={[trackDuration]}
+                        onValueChange={handleTrackDurationChange}
+                        className="w-full"
+                        thumbClassName="bg-blue-500 border-2 border-white"
+                        trackClassName="bg-blue-200"
+                        rangeClassName="bg-blue-500"
+                      />
+                      <p className="text-xs text-black mt-1">
+                        Track Length: {formatTime(trackDuration)}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <RepeatIcon className="w-4 h-4 text-blue-500" />
+                        <h3 className="text-sm font-semibold text-black">TTS Loop Duration</h3>
+                      </div>
+                      <Slider
+                        id="tts-loop-slider"
+                        min={1}
+                        max={trackDuration}
+                        step={1}
+                        value={[ttsDuration]}
+                        onValueChange={handleTtsDurationChange}
+                        className="w-full"
+                        thumbClassName="bg-blue-500 border-2 border-white"
+                        trackClassName="bg-blue-200"
+                        rangeClassName="bg-blue-500"
+                      />
+                      <p className="text-xs text-black mt-1">
+                        TTS Loop: {formatTime(ttsDuration)}
+                      </p>
+                    </div>
                   </div>
-                  <Slider
-                    id="track-length-slider"
-                    min={10}
-                    max={300}
-                    step={1}
-                    value={[trackDuration]}
-                    onValueChange={handleTrackDurationChange}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Track Length: {formatTime(trackDuration)}
-                  </p>
                 </div>
                 
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <RepeatIcon className="w-4 h-4" />
-                    <h3 className="text-sm font-semibold">TTS Loop Duration</h3>
-                  </div>
-                  <Slider
-                    id="tts-loop-slider"
-                    min={1}
-                    max={trackDuration}
-                    step={1}
-                    value={[ttsDuration]}
-                    onValueChange={handleTtsDurationChange}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    TTS Loop: {formatTime(ttsDuration)}
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">Loop Visualization</h3>
+                {/* Loop Visualization */}
+                <div className="bg-white p-4 rounded-xl shadow-md">
+                  <h3 className="text-sm font-semibold mb-2 text-black">Loop Visualization</h3>
                   {renderLoopVisualization()}
                 </div>
                 
-                <div className="bg-secondary rounded-lg p-3 flex flex-col items-center justify-center">
-                  <Clock className="w-6 h-6 mb-1 text-secondary-foreground" />
-                  <p className="text-lg font-bold text-secondary-foreground">{formatTime(currentTime)} / {formatTime(trackDuration)}</p>
-                  <p className="text-xs text-secondary-foreground/80">current / total</p>
+                {/* Current/Total Time display */}
+                <div className="bg-white p-4 rounded-xl shadow-md flex flex-col items-center justify-center">
+                  <Clock className="w-6 h-6 mb-1 text-black" />
+                  <p className="text-lg font-bold text-black">{formatTime(currentTime)} / {formatTime(trackDuration)}</p>
+                  <p className="text-xs text-black/80">current / total</p>
                 </div>
 
-                <div className="bg-muted p-3 rounded-lg mt-2">
+                {/* Playback controls */}
+                <div className="bg-white p-4 rounded-xl shadow-md">
                   <div className="flex items-center justify-between space-x-2 mb-2">
                     <Button
                       onClick={() => handleSkip('back')}
@@ -1096,7 +1225,7 @@ const Studio: React.FC = () => {
                       onClick={handlePlay}
                       className="flex-grow py-2 px-4 rounded-full text-white text-sm font-semibold focus:outline-none"
                       animate={{
-                        backgroundColor: isPlaying ? "#22c55e" : "#3b82f6",
+                        backgroundColor: isPlaying ? "#3b82f6" : "#60a5fa",
                       }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -1117,39 +1246,30 @@ const Studio: React.FC = () => {
                       <SkipForwardIcon className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <RepeatIcon className={`h-4 w-4 ${isLooping ? 'text-primary' : 'text-muted-foreground'}`} />
-                    <Switch
-                      id="loop-mode"
-                      checked={isLooping}
-                      onCheckedChange={handleLoopToggle}
-                    />
-                    <label htmlFor="loop-mode" className="text-xs font-medium">
-                      Loop TTS
-                    </label>
-                  </div>
+                  {/* The "Loop TTS" switch and label have been removed */}
                 </div>
 
-                <div className="relative w-full h-12 mt-2">
+                {/* Download button */}
+                <div className="bg-white p-4 rounded-xl shadow-md">
                   {!isSplit ? (
                     <Button 
-                      className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+                      className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
                       onClick={handleInitialClick}
                     >
                       <Download className="mr-2 h-5 w-5" />
                       Download (€3.00)
                     </Button>
                   ) : (
-                    <div className="flex justify-between w-full h-full space-x-2">
+                    <div className="flex justify-between w-full space-x-2">
                       <Button 
-                        className="w-1/2 h-full bg-blue-500 hover:bg-blue-600 text-white font-bold transition-all duration-300 ease-in-out"
+                        className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white font-bold transition-all duration-300 ease-in-out"
                         onClick={() => handlePayment('PayPal')}
                       >
                         <CreditCard className="mr-2 h-5 w-5" />
                         PayPal
                       </Button>
                       <Button 
-                        className="w-1/2 h-full bg-purple-500 hover:bg-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
+                        className="w-1/2 bg-purple-500 hover:bg-purple-600 text-white font-bold transition-all duration-300 ease-in-out"
                         onClick={() => handlePayment('Card')}
                       >
                         <CreditCard className="mr-2 h-5 w-5" />
@@ -1166,18 +1286,6 @@ const Studio: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row justify-between items-center mt-2 space-y-2 sm:space-y-0 sm:space-x-2">
         <div className="flex items-center space-x-4">
-          <button
-            className="transition-transform hover:scale-110"
-            aria-label="Subliminal.Studio Logo"
-          >
-            <Image
-              src="/head.svg"
-              alt="Subliminal.Studio Logo"
-              width={80}
-              height={80}
-              className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
-            />
-          </button>
           <Button
             onClick={handleLogout}
             className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-sm"
@@ -1196,19 +1304,7 @@ const Studio: React.FC = () => {
           Open Chatbot
         </Button>
 
-        <button
-          onClick={handleNavigateToLanding}
-          className="transition-transform hover:scale-110"
-          aria-label="Go to Landing Page"
-        >
-          <Image
-            src="/head.svg"
-            alt="Go to Landing Page"
-            width={80}
-            height={80}
-            className="rounded-full shadow-lg drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
-          />
-        </button>
+        {/* The logo in the bottom right has been removed */}
       </div>
     </div>
   )
